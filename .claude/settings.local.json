@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(python -c \"import flask; print\\('Flask', flask.__version__\\)\")"
+    ]
+  }
+}
