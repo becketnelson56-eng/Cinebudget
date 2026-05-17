@@ -56,11 +56,13 @@ Tool 2 (Pricing engine with live vendor API integrations) — planned
 
 Roadmap
 Cinebudget is designed as a multi-input production budgeting platform. The Script Breakdown tool is the first of several planned input modules:
+
 Scheduling — upload a stripboard or Day-Out-of-Days to populate shoot day counts and schedule-driven costs
 Deals — upload crew and cast deal memos to populate negotiated rates and fringe calculations
 Pricing Engine — live vendor API integrations to auto-populate unit rates from real-world sources (equipment rental houses, SAG scale rates, location databases)
 Live Budget — Handsontable-powered in-browser spreadsheet that updates in real time as each input module runs
 Export — multi-format export including Excel, PDF, and Movie Magic-compatible output
+
 The account structure of the current output is intentionally designed to accommodate all future inputs without restructuring.
 
 Built by Becket Nelson | CUA Eisen AI Contest 2026
