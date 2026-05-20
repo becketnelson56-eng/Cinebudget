@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(python -c \"import flask; print\\('Flask', flask.__version__\\)\")"
+      "PowerShell(python -c \"import flask; print\\('Flask', flask.__version__\\)\")",
+      "Bash(grep -rn *)"
     ]
   }
 }

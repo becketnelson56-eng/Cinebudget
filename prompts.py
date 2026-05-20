@@ -57,8 +57,15 @@ production data for budgeting purposes.
 OUTPUT RULES:
 - Return ONLY a valid JSON object. No prose, no explanation, no markdown fences.
 - Never hallucinate or guess. If a field cannot be determined, use null or empty array.
+- Never generate placeholder rows for conditions that do not apply to the script. A row stating
+  'welfare worker — not applicable, no child cast identified' or any equivalent 'this does not
+  apply' row is noise to a Line Producer and must not be generated. Only generate SCRIPT rows for
+  elements that actually appear in or are directly implied by the script.
 - Never estimate shooting days — leave day counts for the scheduling team.
-- For cast Amount field: count the number of scenes each character appears in.
+- For cast Amount field: count only scenes where the character is explicitly described as present,
+  performing an action, or delivering dialogue. Do NOT count scenes where they are merely referenced
+  in dialogue by other characters, heard O.S. (off-screen), or implied to be nearby without being
+  shown. The scene count drives the 1600 cost calculation — accuracy is critical.
 - For cast (account 1600) rows: always use unit_type "Days" — scene count is a proxy for shooting days
   so the rate formula (Amount × Rate) works correctly when a Line Producer fills in the day rate later.
   Never use "Flat" for cast.
@@ -90,6 +97,18 @@ EXTRACTION RULES:
 - Period settings apply to ALL items in that scene: wardrobe, props, set dressing all need period versions.
 - Dialogue alone rarely generates costs. Focus on action lines, scene headings, parentheticals.
 - EXT. + public space = location permit row required.
+- LOCATION ROWS — EVERY DISTINCT HEADING: Every distinct slug line location in the script
+  requires a 3500 row. This includes montage locations, single-shot pickups, and brief scenes.
+  The brevity of a scene does not reduce the location requirement — a one-shot montage pickup
+  still requires a full facility rental agreement and must appear in the budget. Generate one 3500
+  row per distinct physical location (not per scene — if two scenes share the same location, one
+  row covers both). Description: '[Location type] — [scene description]', unit_type = Allow.
+- INT. practical location (apartment, house, office, restaurant, bar, hospital, school, elevator,
+  hallway, lobby — any space rented from a real building) = 3500 location row required. Notes:
+  'Practical location requires facility rental agreement and insurance rider. Confirm building
+  management approval and any access/noise restrictions.'
+- Exception: do NOT generate 3500 rows for clearly established owned studio sets, standing sets,
+  or locations described as built on stage.
 - NIGHT in slug = night lighting package row required in 2700 Electric (one row per distinct location).
 - Any weapon (prop or real) = armorer row required in 2950.
 - Any live animal on set = licensed handler row in 3200 AND animal row in 3900 (see ANIMALS section).
@@ -110,6 +129,12 @@ EXTRACTION RULES:
   same script_page and a script_quote from the triggering action line. This is a structural rule —
   no exceptions. A stunt noted in the Scene Breakdown with no 2950 account row is an incomplete
   extraction.
+- MULTI-CAST STUNT GAGS: Any stunt gag involving two or more principal cast members
+  simultaneously — a collision, fall, chase, or impact involving multiple actors — requires a
+  Stunt Performer standby row in ADDITION to the Stunt Coordinator and Safety Officer rows.
+  Description: 'Stunt performer(s) standby — [gag description], [cast names]', Amount = number
+  of cast members involved, unit_type = Days. Notes: 'Stunt doubles on standby required — Stunt
+  Coordinator to assess whether performer doubles needed for impact takes.'
 - SCENE BREAKDOWN CONSISTENCY — EXTRAS: For every scene where extras_count > 0 or
   extras_description is non-empty, you MUST generate at minimum one row in account 3900.
   Description: 'Background extras — [scene location/description]'. Amount = estimated count.
@@ -149,6 +174,10 @@ CAST-HANDLED COSTUME PIECES (account 3300):
   keep the item in 3300 Wardrobe but add this note: 'Actively handled on camera — provide handling
   units separate from hero costume. Coordinate with Props department for continuity.'
 - Do NOT move cast-handled costume pieces to 2500. Keep in 3300 and flag the handling requirement.
+- NEVER create a 2500 Props row for a costume item, even to flag cross-department awareness. If a
+  costume is worn by a character, it belongs in 3300 ONLY. Cross-department notes belong in the
+  3300 Notes field — not as a separate 2500 row. A costume item in both 2500 and 3300 is always a
+  duplicate and must be removed from 2500.
 
 EXTRAS AND BACKGROUND PERFORMERS (account 3900):
 - Extras rows must ONLY be generated when people are affirmatively described as present: 'crowd',
@@ -160,9 +189,14 @@ EXTRAS AND BACKGROUND PERFORMERS (account 3900):
   'silent', 'vacant', 'hollow'. The correct output is no row at all — a note acknowledging the
   emptiness is not a substitute for omitting the row.
 - All extras and background performers belong in 3900 exclusively. Never in 1600.
-- Featured background (a character described with scripted action, like 'a drunk at the fountain')
-  may also require a separate 1600 day-player row if they have lines or distinctive scripted action
-  that implies more than a standard extra.
+- FEATURED BACKGROUND AS DAY PLAYERS (account 1600): Any background character who receives a
+  specific individual scripted action distinctly separate from the crowd — named or described with
+  an isolated direction ('the DRUNK at the fountain mutters to himself', 'a WOMAN in the corner
+  weeps quietly', 'the WAITER pauses to stare') — requires BOTH a 3900 background row AND a 1600
+  day-player row. The 1600 row captures the rate premium paid to a featured extra who receives
+  individual direction from the director. Amount = 1, unit_type = Days. Notes: 'Featured background
+  — individual scripted action implies day-player rate. Confirm premium with casting.'
+  Do not generate 1600 rows for incidental crowd movement or vague atmospheric background action.
 
 ANIMALS ON SET:
 - Live animals are NOT props and must NEVER appear in account 2500.
@@ -209,6 +243,15 @@ NAMED BRANDS AND PRODUCT CLEARANCE (account 6200):
   copyrighted work. Description: 'Music sync licensing — [song/track description if known]',
   unit_type = Allow. Notes: 'Sync license required for any copyrighted track played on camera.
   Common and expensive oversight — confirm with music supervisor before production.'
+- SOURCE / AMBIENT MUSIC: Any scripted description of music playing in a location — 'music blares',
+  'a song plays', 'the radio is on', 'music from speakers', 'jukebox plays', 'background music' —
+  MUST generate a 6200 sync licensing flag even if no specific track is named. The specific track
+  will be selected in production; the clearance requirement must be budgeted now. Description:
+  'Music sync licensing — source/ambient music playing on camera, [location/scene]', unit_type =
+  Allow. Notes: 'Script describes music playing in this location. If any real copyrighted track is
+  used, both master use and sync rights are required. Music supervisor must identify all tracks
+  before production — common and expensive oversight.' Do not omit this row just because the track
+  is unidentified — that is the most common cause of sync licensing budget surprises.
 
 PRE-PRODUCTION FABRICATION COSTS:
 - When the script or extraction notes indicate that a prop, photograph, painting, or set piece must
@@ -333,6 +376,33 @@ ACCOUNT ROUTING — PROPS vs. ART DEPT vs. SET DECORATION (MUTUAL EXCLUSION):
   correct account based on the rule. Do NOT leave an item in the wrong account with a hedge note.
   Breakaway/destructible set pieces that cast crash through: 2500, not 2400.
 
+MULTI-ACTION CAST-INTERACTIVE SET PIECES (account 2500):
+- Any set piece that serves as the primary surface or object for three or more scripted cast
+  actions across one or more scenes requires its own dedicated 2500 Props row — independent of any
+  2400 Set Decoration entry for the same item.
+- Count scripted actions: placing objects on it, picking objects up from it, opening/closing it,
+  writing at it, eating/drinking at it, or any other direct physical engagement by a cast member.
+- The dedicated 2500 row covers the set piece itself. Props used AT the set piece (items placed
+  on it, a drawer, a container) get their own separate rows.
+- Notes must say: 'Primary cast-interactive surface across multiple scenes — coordinate with Set
+  Decoration for matching background unit.'
+- Example: a desk where a character writes, pours drinks, places a gun, and opens a drawer across
+  three scenes = four cast actions → one dedicated 2500 row for the desk, plus individual rows for
+  the drawer and any specific handled items.
+
+CROSS-ACCOUNT REFERENCES — NOT SUBSTITUTES FOR ROWS:
+- Any time a row's Notes field references another account — 'see 3000', 'coordinate with 2950',
+  'flag for 6200', 'see account XXXX' — you MUST ALSO generate a corresponding row in that
+  referenced account. A cross-reference in Notes is not a substitute for the row itself.
+- The referenced account row must be a complete, independent line item with its own description,
+  amount, unit_type, and notes. A note that references another account but does not generate a row
+  there leaves a cost invisible to the budget. That is an unresolved flag, not a completed extraction.
+- Example: if 2500 percolator Notes says 'See 3000 for practical steam continuity', there MUST be
+  a separate 3000 Mechanical FX row — 'Percolator steam — practical bubbling steam effect,
+  continuity management across takes'. The 2500 note alone is insufficient.
+- This rule applies in all directions: 2500 referencing 3000, 2400 referencing 2500, 3300
+  referencing 3200, any account referencing 6200, etc.
+
 ACCOUNT ROUTING — STUNTS & SAFETY (2950) vs. MECHANICAL FX (3000):
 - 2950 Stunts & Safety: all safety personnel and stunt labor. Use for: stunt coordinator, stunt
   performers, safety officers, wire work rigs, crash pads, protective equipment, stunt drivers.
@@ -345,6 +415,79 @@ ACCOUNT ROUTING — STUNTS & SAFETY (2950) vs. MECHANICAL FX (3000):
   3000 is for the effect itself; 2950 is for the safety and stunt labor around it.
   A scene with a stunt fall + explosion needs rows in BOTH 2950 (stunt performer, safety officer)
   AND 3000 (practical explosion rig, pyrotechnician).
+
+SPECIALIST CAMERA EQUIPMENT (account 2600):
+- Account 2600 covers all specialist camera equipment and non-standard units beyond the core camera
+  package. Generate a 2600 SCRIPT row whenever the script or scene breakdown flags a specialist
+  camera requirement.
+- Drone/aerial photography: Description: 'Drone unit + FAA-licensed operator', unit_type = Days.
+  Notes: 'FAA Part 107 license required. Location permit and airspace clearance may be needed.'
+- Underwater camera: Description: 'Underwater camera housing', unit_type = Days. Notes: 'Requires
+  dive safety officer and dive tender. Generate a 2950 Dive Safety Officer row as well.'
+- Specialist cranes (technocrane, Milo arm, jib arm, condor): Description: '[Equipment type] +
+  operator', unit_type = Rental-Day.
+- High-speed/slow-motion camera: Description: 'High-speed camera rental', unit_type = Rental-Day.
+- Stabilized remote heads (hot head, remote head, Steadicam, gimbal): Description: '[Equipment
+  type] + operator', unit_type = Days.
+- SCENE BREAKDOWN CONSISTENCY — SPECIAL CAMERA: For every scene where the special_camera array is
+  non-empty, you MUST generate at minimum one matching row in account 2600. A scene flagging 'drone'
+  or 'underwater' in special_camera with no 2600 row is an incomplete extraction.
+
+WEATHER AND ENVIRONMENTAL PRACTICAL FX (account 3000):
+- Rain, snow, fog, mist, haze, wind, and other on-set weather or environmental effects are the
+  responsibility of the Special Effects department and must be tracked in account 3000 Mechanical FX.
+- Generate a 3000 row for each weather or environmental effect flagged in the script or in the
+  practical_fx array:
+  Rain rig: Description: 'Rain rig — practical precipitation', unit_type = Rental-Day.
+  Snow rig: Description: 'Snow rig — practical snowfall or snow dressing', unit_type = Rental-Day.
+  Fog/mist/haze: Description: 'Fog machine + fluid — [fog/mist/haze] effect, continuity
+  management', unit_type = Days.
+  Smoke: Description: 'Smoke machine — on-set practical smoke effect', unit_type = Days.
+  Wind machine: Description: 'Wind machine — on-set practical wind effect', unit_type = Rental-Day.
+- SCENE BREAKDOWN CONSISTENCY — PRACTICAL FX: For every scene where the practical_fx array is
+  non-empty and contains a weather or environmental effect, generate a matching 3000 row. A scene
+  flagging 'rain' or 'fog' in practical_fx with no 3000 row is an incomplete extraction.
+- PRACTICAL WATER ON SET: Any scripted water source that runs on camera — shower, tap, faucet,
+  hose, fountain, pool filling, or any practical plumbing — requires a 3000 Mechanical FX row for
+  water rigging, pressure management, and continuity between takes. Practical water is an FX
+  department responsibility, not set decoration.
+  Running shower: Description: 'Running shower — practical water effect, continuity management',
+  unit_type = Days. Notes: 'FX dept to manage water pressure continuity between takes. Set build
+  requires dedicated water supply; practical location requires adequate plumbing and drainage.'
+  Running tap/faucet: Description: 'Practical tap/faucet — running water on camera', unit_type = Days.
+- Note: large-scale fog or rain rigs may also require Electric (2700) coordination for rigging
+  power. Generate a 2700 row as well when the rig's scale implies electrical department involvement.
+
+MOVING VEHICLE INTERIOR PHOTOGRAPHY (account 2600):
+- Any scene with a slug line of the form INT. [VEHICLE] - MOVING (car, bus, truck, taxi, van,
+  ambulance, etc.) requires a dedicated 2600 row. Moving vehicle interiors cannot be filmed with a
+  standard locked-off camera package — they require a process trailer, a camera car mount, or an
+  in-vehicle rigging solution.
+- Description: 'Process trailer / camera car — INT. moving vehicle photography', unit_type =
+  Rental-Day. Notes: 'Moving vehicle interior requires process trailer or camera car rig. Confirm
+  approach with director and DP — process trailer vs. locked-off in-vehicle vs. greenscreen stage
+  each have different cost and scheduling implications.'
+- If the vehicle is also involved in a stunt, chase, or scripted collision, add a 2950 Stunt
+  Driver row in addition to the 2600 row.
+- This applies to ALL moving vehicle interiors — not just action sequences. A quiet dialogue scene
+  in a moving taxi still requires this infrastructure.
+
+VISUAL IMPOSSIBILITY AND REALITY TRANSITIONS (account 3100):
+- Whenever the script describes something physically or visually impossible to photograph
+  practically — a character shrinking or growing, an impossible perspective, a reality shift,
+  dream logic with physical consequences, or a transition between contradictory visual states —
+  a 3100 Special VFX row MUST be generated.
+- Do NOT wait for the word 'VFX' or 'visual effect' to appear. Many scripts describe VFX shots
+  using only action language. The visual impossibility itself is the trigger.
+- Description: 'Special VFX — [description of the impossibility or transition]', unit_type = Allow,
+  Confidence = High. Notes: 'Practical photography alone cannot achieve this — confirm approach
+  with VFX supervisor. Options: miniature photography, digital composite, forced perspective,
+  in-camera trick, or combination.'
+- Triggers include: size changes (a character appears miniaturized or enormous), phase-through (a
+  character passes through a solid object), teleportation or instantaneous relocation, reality
+  shifts or dream logic where physics do not apply (a character falling upward, walls melting,
+  impossible geometry), simultaneous appearance in contradictory locations, and temporal reversals
+  shown visually on screen.
 
 CONFIDENCE LEVELS:
 - High: item explicitly named in script.
@@ -387,4 +530,21 @@ scripted sound cue implying physical event -> Props (2500) breakaway item and/or
 hand/body/photo double flagged in notes -> Talent (1600): dedicated row at Low/Medium confidence
 welfare worker/on-set guardian/studio teacher (child actor) -> Set Operations (3200) only [NEVER 1600]
 custom prop photo/artwork requiring fabrication shoot with cast -> Set Operations (3200): pre-production session cost
+set piece with 3+ scripted cast actions (desk, table, surface) -> Props (2500): dedicated row for the set piece itself, separate from props placed on/in it
+notes referencing another account ('see 3000', 'flag for 6200') -> that account: generate a full row there — cross-references are not substitutes
+costume item handled on camera -> Wardrobe (3300) ONLY: add handling note in 3300 Notes — NEVER create a 2500 row for a costume
+INT. [VEHICLE] - MOVING (car, taxi, bus, truck, van, ambulance) -> Camera (2600): process trailer / camera car row — applies to ALL moving vehicle interiors, not just chase sequences
+weather/environmental practical FX (rain, snow, fog, mist, haze, smoke, wind) in practical_fx array -> Mechanical FX (3000): dedicated weather rig row per effect type; large rigs may also need Electric (2700)
+practical water on set (running shower, tap, hose, fountain, pool) -> Mechanical FX (3000): water rigging and pressure continuity row — always required even on practical locations
+specialist camera equipment (drone, aerial, boom/crane move, underwater, technocrane, steadicam, gimbal) in special_camera array -> Camera (2600): dedicated row per equipment type — MUST generate if special_camera non-empty
+featured background with individual isolated scripted action (named or specifically directed) -> Talent (1600): day-player row PLUS Atmosphere (3900): background row — both required
+visual impossibility / reality transition / physics defied / size change / dream logic / teleportation -> Special VFX (3100): generate row even if the word 'VFX' does not appear in the script
+picture vehicle 2500 Notes contain 'stunt driver' -> Stunts & Safety (2950): stunt driver row required — must generate, never leave as a note only
+scripted wounds / blood / cuts / bruises / injury makeup / physical condition on cast body -> Makeup & Hair (3400): special makeup effect row
+INT. practical location (apartment, office, restaurant, bar, hospital, school, hallway, elevator) not studio stage -> Locations (3500): facility rental agreement row required
+cast Amount = scene count: count only scenes where character is explicitly present or has dialogue/action — NEVER count O.S. mentions, dialogue references, or implied presence
+source/ambient music in a location ('music blares', 'song plays', 'radio on', 'jukebox') → Legal (6200): sync licensing row required even if no specific track is named
+multi-cast stunt gag (2+ principals simultaneously impacted) → Stunts & Safety (2950): Stunt Coordinator + Safety Officer + Stunt Performer standby rows — all three required
+montage scene location / brief single-shot pickup location → Locations (3500): location row required — brevity does not reduce the facility rental requirement
+'not applicable' / 'no [element] identified' placeholder → DO NOT GENERATE — only extract rows for elements actually present in the script
 """

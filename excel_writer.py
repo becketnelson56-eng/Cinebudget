@@ -603,17 +603,24 @@ def _write_account_rows(
 
     SCRIPT rows get formulas in columns F and H.
     Template rows are left blank in F and H (no value to calculate yet).
+
+    Patch 1 (Hereditary): template rows are renumbered from max(last_auto_idx,
+    highest_explicit_sub + 1) so they never collide with explicit account numbers
+    that Claude may have set on SCRIPT rows (e.g. 2500.17).
     """
     row = 2
     sub_idx = 1
 
     # — SCRIPT rows ————————————————————————————————
+    # Always use the sequential sub_idx for column A — never the item's original
+    # account_no from Claude. Post-processing may remove rows, leaving gaps in
+    # Claude's original numbering. sub_idx produces gap-free sequential output.
     for item in script_items:
         _write_script_row(ws, row, acct_no, sub_idx, item, pdf_path)
         row += 1
         sub_idx += 1
 
-    # — Template placeholder rows ——————————————————
+    # — Template placeholder rows follow immediately after the last SCRIPT row ——
     for desc, placeholder_type in ACCOUNT_TEMPLATES.get(acct_no, []):
         _write_template_row(ws, row, acct_no, sub_idx, desc, placeholder_type)
         row += 1
@@ -624,8 +631,8 @@ def _write_script_row(
     ws, row: int, acct_no: str, idx: int, item: dict, pdf_path: str
 ) -> None:
     """Write a single SCRIPT-extracted row onto an account tab."""
-    # A — Account No
-    ws.cell(row=row, column=1, value=item.get("account_no") or f"{acct_no}.{idx:02d}").font = BASE_FONT
+    # A — Account No (always sequential — never use item's original account_no)
+    ws.cell(row=row, column=1, value=f"{acct_no}.{idx:02d}").font = BASE_FONT
 
     # B — Description
     b = ws.cell(row=row, column=2, value=item.get("description") or "")

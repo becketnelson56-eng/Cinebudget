@@ -14,6 +14,7 @@ import argparse
 import json
 import os
 import pathlib
+import re
 import sys
 
 from api_client import get_breakdown
@@ -112,8 +113,8 @@ def _enforce_flow_through(data: dict) -> None:
             seen_locations: set[str] = set()
             for scene in night_scenes:
                 heading = scene.get("heading", "")
-                # Strip the time-of-day suffix from the slug line to get the location
-                location = heading.rsplit(".", 1)[0].strip() if "." in heading else heading
+                # Strip the time-of-day suffix (e.g. " - NIGHT") to get the location key
+                location = heading.rsplit(" - ", 1)[0].strip() if " - " in heading else heading
                 if location in seen_locations:
                     continue
                 seen_locations.add(location)
@@ -148,8 +149,12 @@ def _enforce_flow_through(data: dict) -> None:
         if any(kw in char_name.lower() for kw in _CREW_ROLE_KEYWORDS):
             continue
         char_lower = char_name.lower()
+        # Strip articles so "The Driver" → ["driver"] and matches "Driver/Kidnapper" etc.
+        _NAME_STOP = frozenset({"the", "a", "an", "of", "in", "on", "at", "and"})
+        char_words = [w for w in char_lower.split() if w not in _NAME_STOP and len(w) > 1]
         already_covered = any(
-            char_lower in r.get("description", "").lower()
+            char_lower in r.get("description", "").lower() or
+            any(w in r.get("description", "").lower() for w in char_words)
             for r in wardrobe + injected
         )
         if not already_covered:
@@ -173,6 +178,445 @@ def _enforce_flow_through(data: dict) -> None:
             f"  [flow-through] Injected {len(injected)} 3300 wardrobe fallback row(s) "
             f"for unmatched cast member(s)."
         )
+
+    # ── Special Camera → 2600 ─────────────────────────────────────────────────
+    _SPECIAL_CAMERA_TRIGGERS = {
+        "drone": ("Drone unit + FAA-licensed operator", "Days"),
+        "aerial": ("Aerial camera unit", "Days"),
+        "underwater": ("Underwater camera housing", "Days"),
+        "technocrane": ("Technocrane + remote head operator", "Rental-Day"),
+        "techno crane": ("Technocrane + remote head operator", "Rental-Day"),
+        "boom": ("Camera crane / jib arm + operator", "Rental-Day"),
+        "crane": ("Camera crane + operator", "Rental-Day"),
+        "jib": ("Camera jib arm + operator", "Rental-Day"),
+        "milo": ("Milo crane arm + remote head operator", "Rental-Day"),
+        "condor": ("Condor crane + operator", "Rental-Day"),
+        "remote head": ("Remote head camera mount + operator", "Rental-Day"),
+        "hot head": ("Hot head remote head mount + operator", "Rental-Day"),
+        "helicopter": ("Helicopter/aerial mount + unit", "Days"),
+        "high speed": ("High-speed camera rental", "Rental-Day"),
+        "slow motion": ("High-speed camera rental — slow motion", "Rental-Day"),
+        "slo-mo": ("High-speed camera rental — slow motion", "Rental-Day"),
+        "steadicam": ("Steadicam operator + equipment", "Days"),
+        "gimbal": ("Camera gimbal rig + operator", "Days"),
+        "process trailer": ("Process trailer + camera car rigging", "Rental-Day"),
+        "camera car": ("Camera car + rigging", "Rental-Day"),
+    }
+    all_special_cam = [(s, e) for s in scenes for e in (s.get("special_camera") or []) if e]
+    if all_special_cam:
+        script_2600 = [r for r in accounts.get("2600", []) if r.get("populated_by") == "SCRIPT"]
+        existing_2600_text = " ".join(r.get("description", "").lower() for r in script_2600)
+        injected_cam = []
+        covered_cam: set[str] = set()
+        for scene, entry in all_special_cam:
+            entry_lower = entry.lower()
+            for kw, (desc, unit) in _SPECIAL_CAMERA_TRIGGERS.items():
+                if kw in entry_lower and kw not in covered_cam and kw not in existing_2600_text:
+                    covered_cam.add(kw)
+                    injected_cam.append({
+                        "account_no": None,
+                        "description": desc,
+                        "amount": 1,
+                        "unit_type": unit,
+                        "populated_by": "SCRIPT",
+                        "script_page": scene.get("script_page"),
+                        "script_quote": "",
+                        "notes": (
+                            f"Auto-generated: scene {scene.get('scene_number', '?')} flagged "
+                            f"'{entry}' in special_camera — no matching 2600 row found."
+                        ),
+                        "confidence": "Medium",
+                    })
+        if injected_cam:
+            accounts.setdefault("2600", []).extend(injected_cam)
+            print(
+                f"  [flow-through] Injected {len(injected_cam)} 2600 specialist camera "
+                f"row(s) — scene breakdown flagged specialist equipment."
+            )
+
+    # ── Practical FX → 3000 ───────────────────────────────────────────────────
+    _PRACTICAL_FX_TRIGGERS = {
+        "rain": ("Rain rig — practical precipitation", "Rental-Day"),
+        "snow": ("Snow rig — practical snowfall or snow dressing", "Rental-Day"),
+        "fog": ("Fog machine + fluid — atmospheric effect, continuity management", "Days"),
+        "mist": ("Atmospheric mist rig — continuity management", "Days"),
+        "haze": ("Atmospheric haze — diffusion package", "Days"),
+        "smoke": ("Smoke machine — on-set practical smoke effect", "Days"),
+        "wind": ("Wind machine — on-set practical wind effect", "Rental-Day"),
+        "dust": ("Dust rig — practical dust effect", "Allow"),
+        "fire": ("Fire rig — practical on-set fire effect", "Allow"),
+        "explosion": ("Pyrotechnic rig — practical explosion or blast effect", "Allow"),
+        "wave": ("Water/wave rig — practical water effect", "Allow"),
+        "flood": ("Water flooding rig — practical water effect", "Allow"),
+        "ice": ("Ice/frost set dressing — practical environmental condition", "Allow"),
+        "shower": ("Running shower — practical water effect, continuity management", "Days"),
+        "water": ("Practical water rig — running water on set", "Days"),
+        "tap": ("Practical water rig — running tap/faucet on set", "Days"),
+        "faucet": ("Practical water rig — running faucet on set", "Days"),
+        "hose": ("Water hose — practical water on set", "Days"),
+        "fountain": ("Practical fountain — water effect, continuity management", "Days"),
+        "pool": ("Practical water pool/tank — water rigging and drainage", "Rental-Day"),
+    }
+    all_practical_fx = [(s, fx) for s in scenes for fx in (s.get("practical_fx") or []) if fx]
+    if all_practical_fx:
+        script_3000 = [r for r in accounts.get("3000", []) if r.get("populated_by") == "SCRIPT"]
+        existing_3000_text = " ".join(r.get("description", "").lower() for r in script_3000)
+        injected_fx = []
+        covered_fx: set[str] = set()
+        for scene, fx in all_practical_fx:
+            fx_lower = fx.lower()
+            for kw, (desc, unit) in _PRACTICAL_FX_TRIGGERS.items():
+                if kw in fx_lower and kw not in covered_fx and kw not in existing_3000_text:
+                    covered_fx.add(kw)
+                    injected_fx.append({
+                        "account_no": None,
+                        "description": desc,
+                        "amount": 1,
+                        "unit_type": unit,
+                        "populated_by": "SCRIPT",
+                        "script_page": scene.get("script_page"),
+                        "script_quote": "",
+                        "notes": (
+                            f"Auto-generated: scene {scene.get('scene_number', '?')} flagged "
+                            f"'{fx}' in practical_fx — no matching 3000 row found."
+                        ),
+                        "confidence": "Medium",
+                    })
+        if injected_fx:
+            accounts.setdefault("3000", []).extend(injected_fx)
+            print(
+                f"  [flow-through] Injected {len(injected_fx)} 3000 practical FX "
+                f"row(s) — scene breakdown flagged weather or on-set practical effects."
+            )
+
+    # ── Special Makeup → 3400 ─────────────────────────────────────────────────
+    makeup_scenes = [s for s in scenes if s.get("special_makeup")]
+    if makeup_scenes:
+        script_3400 = [r for r in accounts.get("3400", []) if r.get("populated_by") == "SCRIPT"]
+        if not script_3400:
+            acct = accounts.setdefault("3400", [])
+            for scene in makeup_scenes:
+                scene_num = scene.get("scene_number", "?")
+                page = scene.get("script_page")
+                items = scene.get("special_makeup", [])
+                makeup_str = "; ".join(str(m) for m in items[:3])
+                acct.append({
+                    "account_no": None,
+                    "description": f"Special makeup effect — {makeup_str}",
+                    "amount": 1,
+                    "unit_type": "Days",
+                    "populated_by": "SCRIPT",
+                    "script_page": page,
+                    "script_quote": "",
+                    "notes": (
+                        f"Auto-generated fallback: scene {scene_num} flagged special makeup "
+                        f"({makeup_str}) but extraction produced no 3400 SCRIPT rows."
+                    ),
+                    "confidence": "Medium",
+                })
+            print(
+                f"  [flow-through] Injected {len(makeup_scenes)} 3400 special makeup "
+                f"row(s) — extraction produced none."
+            )
+
+    # ── Stunt Driver from 2500 Notes → 2950 ───────────────────────────────────
+    _STUNT_DRIVER_PHRASES = ("stunt driver",)
+    props_2500 = [r for r in accounts.get("2500", []) if r.get("populated_by") == "SCRIPT"]
+    stunt_driver_props = [
+        r for r in props_2500
+        if any(phrase in (r.get("notes") or "").lower() for phrase in _STUNT_DRIVER_PHRASES)
+    ]
+    if stunt_driver_props:
+        existing_2950_text = " ".join(
+            r.get("description", "").lower()
+            for r in accounts.get("2950", [])
+            if r.get("populated_by") == "SCRIPT"
+        )
+        if "stunt driver" not in existing_2950_text:
+            acct = accounts.setdefault("2950", [])
+            for prop_row in stunt_driver_props:
+                veh_desc = prop_row.get("description", "picture vehicle")
+                acct.append({
+                    "account_no": None,
+                    "description": f"Stunt driver — {veh_desc}",
+                    "amount": 1,
+                    "unit_type": "Days",
+                    "populated_by": "SCRIPT",
+                    "script_page": prop_row.get("script_page"),
+                    "script_quote": "",
+                    "notes": (
+                        f"Auto-generated: 2500 Props row for '{veh_desc[:70]}' Notes "
+                        f"flagged 'stunt driver' — auto-injected 2950 row."
+                    ),
+                    "confidence": "Medium",
+                })
+            print(
+                f"  [flow-through] Injected {len(stunt_driver_props)} 2950 stunt driver "
+                f"row(s) — flagged in 2500 Props Notes."
+            )
+
+
+# ── Patch 1: suppress self-flagged misrouted rows ─────────────────────────────
+
+_MISROUTED_PHRASES = (
+    "route to",
+    "moved here in error",
+    "reassign to",
+    "route primary to",
+    "remove from",
+    "duplicate flag",
+    "do not duplicate",
+    "place in 2500",
+    "place in 3300",
+    "place in 3900",
+    "move to 2500",
+    "move to 3300",
+    "move to 3900",
+)
+
+
+def _suppress_misrouted_rows(data: dict) -> None:
+    """
+    Patch 1: Remove SCRIPT rows whose Notes field explicitly flags them as misrouted.
+
+    When Claude places an item in the wrong account and writes a Notes phrase like
+    'Route to 2500 — moved here in error', it typically also generates the correct row
+    in the target account. This function removes the wrong-account row so only the
+    correct row survives. Must run before _enforce_flow_through and before Excel write.
+    Modifies data in-place.
+    """
+    accounts = data.get("accounts", {})
+    total = 0
+    for acct_no, rows in list(accounts.items()):
+        clean = []
+        for row in rows:
+            notes_lower = (row.get("notes") or "").lower()
+            if any(phrase in notes_lower for phrase in _MISROUTED_PHRASES):
+                print(
+                    f"  [suppress-misrouted] {acct_no}: "
+                    f"'{row.get('description', '?')[:70]}' — Notes flagged misrouting, suppressed."
+                )
+                total += 1
+            else:
+                clean.append(row)
+        accounts[acct_no] = clean
+    if total:
+        print(f"  [suppress-misrouted] {total} misrouted row(s) removed.")
+
+
+# ── Patch 3: enforce cross-reference flags → 2500 ────────────────────────────
+
+_CROSS_REF_TRIGGERS = ("2500 row is required", "dedicated 2500")
+
+
+def _enforce_cross_reference_flags(data: dict) -> None:
+    """
+    Patch 3: Auto-inject 2500 SCRIPT rows when Notes or scene breakdown flags
+    explicitly call for a dedicated 2500 row but none exists yet.
+
+    Scans:
+      - All account rows whose Notes contain '2500 row is required' or 'dedicated 2500'
+      - scene_breakdown[].flags containing the same phrases
+
+    Must run after _suppress_misrouted_rows and before _enforce_flow_through.
+    Modifies data in-place.
+    """
+    accounts = data.get("accounts", {})
+    scenes = data.get("scene_breakdown", [])
+    acct_2500 = accounts.setdefault("2500", [])
+
+    def _existing_norms() -> set:
+        return {_norm(r.get("description", "")) for r in acct_2500 if r.get("populated_by") == "SCRIPT"}
+
+    injected = []
+    seen_norms: set[str] = set()
+
+    for acct_no, rows in accounts.items():
+        for row in rows:
+            notes_lower = (row.get("notes") or "").lower()
+            if not any(phrase in notes_lower for phrase in _CROSS_REF_TRIGGERS):
+                continue
+            desc = row.get("description", "")
+            n = _norm(desc)
+            if not n or n in _existing_norms() or n in seen_norms:
+                continue
+            seen_norms.add(n)
+            injected.append({
+                "account_no": None,
+                "description": desc,
+                "amount": 1,
+                "unit_type": "Allow",
+                "populated_by": "SCRIPT",
+                "script_page": row.get("script_page"),
+                "script_quote": row.get("script_quote", ""),
+                "notes": (
+                    f"Auto-generated: {acct_no} Notes flagged '2500 row is required' or "
+                    f"'dedicated 2500'. Verify routing and description with Props department."
+                ),
+                "confidence": row.get("confidence", "Medium"),
+            })
+            print(
+                f"  [cross-ref-flags] Injected 2500 row for "
+                f"'{desc[:70]}' (flagged in {acct_no} Notes)."
+            )
+
+    for scene in scenes:
+        for flag in (scene.get("flags") or []):
+            flag_lower = flag.lower()
+            if not any(phrase in flag_lower for phrase in _CROSS_REF_TRIGGERS):
+                continue
+            desc = f"Props requirement — {flag}"
+            n = _norm(desc)
+            if not n or n in _existing_norms() or n in seen_norms:
+                continue
+            seen_norms.add(n)
+            injected.append({
+                "account_no": None,
+                "description": desc,
+                "amount": 1,
+                "unit_type": "Allow",
+                "populated_by": "SCRIPT",
+                "script_page": scene.get("script_page"),
+                "script_quote": "",
+                "notes": (
+                    f"Auto-generated: scene {scene.get('scene_number', '?')} breakdown flag "
+                    f"indicated '2500 row is required' or 'dedicated 2500'. "
+                    f"Verify with Props department."
+                ),
+                "confidence": "Medium",
+            })
+            print(
+                f"  [cross-ref-flags] Injected 2500 row for scene "
+                f"{scene.get('scene_number', '?')} flag: '{flag[:70]}'."
+            )
+
+    if injected:
+        acct_2500.extend(injected)
+        print(f"  [cross-ref-flags] {len(injected)} 2500 row(s) injected from Notes/flags.")
+
+
+# ── Patches 2 & 4: cross-account deduplication ────────────────────────────────
+
+_DEDUP_NOISE = frozenset({"hero", "breakaway", "practical", "the", "a", "an", "and"})
+
+# Only treat references to known account numbers as meaningful (avoids matching
+# page numbers, years, or other 4-digit values in Notes text).
+_KNOWN_ACCOUNTS = frozenset({
+    "1600", "2200", "2300", "2400", "2500", "2600", "2700", "2800",
+    "2900", "2950", "3000", "3100", "3200", "3300", "3400", "3500",
+    "3600", "3900", "6200",
+})
+
+_ACCT_REF_RE = re.compile(r"\b([1-9]\d{3})\b")
+
+
+def _norm(desc: str) -> str:
+    """Normalize a description to a stripped word-set for near-match comparison."""
+    # Take only the core item name — everything before an em/en dash or opening paren
+    core = re.split(r"[—–]|\s\(", desc)[0].lower()
+    words = [w.strip(".,;:!?'\"") for w in core.split()]
+    return " ".join(w for w in words if w and w not in _DEDUP_NOISE)
+
+
+def _token_jaccard(a: str, b: str) -> float:
+    """Jaccard similarity between word-token sets of two normalized descriptions."""
+    ta, tb = set(a.split()), set(b.split())
+    if not ta or not tb:
+        return 0.0
+    return len(ta & tb) / len(ta | tb)
+
+
+def _deduplicate_accounts(data: dict) -> None:
+    """
+    Patches 2 & 4: Cross-account deduplication with three priority rules.
+
+    Operates only on SCRIPT rows; DEAL/SCHEDULE rows are never touched.
+    Rules applied in order (earlier rules take precedence):
+      Rule 1 — 2400 vs 2500: keep 2500 (cast-interactive wins over set decoration)
+      Rule 2 — 2500 vs 3300: keep 3300 (costume/wardrobe wins over props)
+      Rule 3 — Notes-referenced account: if the same item exists in the account
+               referenced in a row's Notes field, suppress the source row and keep
+               the Notes-referenced account's row.
+    Suppressed rows are logged to the terminal.
+    Modifies data in-place.
+    """
+    accounts = data.get("accounts", {})
+
+    def script_norms(acct_no: str) -> set:
+        return {
+            _norm(r.get("description", ""))
+            for r in accounts.get(acct_no, [])
+            if r.get("populated_by") == "SCRIPT" and _norm(r.get("description", ""))
+        }
+
+    def suppress_from(acct_no: str, target_norms: set, reason: str) -> None:
+        rows = accounts.get(acct_no, [])
+        clean = []
+        for row in rows:
+            if row.get("populated_by") != "SCRIPT":
+                clean.append(row)
+                continue
+            n = _norm(row.get("description", ""))
+            if n and n in target_norms:
+                print(
+                    f"  [dedup] Suppressed {acct_no}: "
+                    f"'{row.get('description', '?')[:70]}' — {reason}"
+                )
+            else:
+                clean.append(row)
+        accounts[acct_no] = clean
+
+    # Rule 1: 2400 vs 2500 — Props wins over Set Decoration (exact + fuzzy match)
+    # Fuzzy match catches word-order variants like "RISK board game" vs "RISK game board".
+    norms_2500 = script_norms("2500")
+    if norms_2500:
+        rows_2400 = accounts.get("2400", [])
+        clean_2400 = []
+        for row in rows_2400:
+            if row.get("populated_by") != "SCRIPT":
+                clean_2400.append(row)
+                continue
+            n = _norm(row.get("description", ""))
+            if not n:
+                clean_2400.append(row)
+                continue
+            if n in norms_2500 or any(_token_jaccard(n, t) >= 0.4 for t in norms_2500 if t):
+                print(
+                    f"  [dedup] Suppressed 2400: "
+                    f"'{row.get('description', '?')[:70]}' — also in 2500 (Props wins)"
+                )
+            else:
+                clean_2400.append(row)
+        accounts["2400"] = clean_2400
+
+    # Rule 2: 2500 vs 3300 — Wardrobe wins over Props
+    norms_3300 = script_norms("3300")
+    if norms_3300:
+        suppress_from("2500", norms_3300, "also in 3300 — Wardrobe wins over Props")
+
+    # Rule 3: Notes-referenced account — suppress source when same item exists in target
+    # Skip pairs already handled by Rules 1 & 2 to avoid double-processing.
+    rule12_pairs = {("2400", "2500"), ("2500", "3300")}
+    for acct_no in list(accounts.keys()):
+        for row in list(accounts.get(acct_no, [])):
+            if row.get("populated_by") != "SCRIPT":
+                continue
+            notes = row.get("notes") or ""
+            desc = row.get("description", "")
+            n = _norm(desc)
+            if not n:
+                continue
+            for ref_acct in _ACCT_REF_RE.findall(notes):
+                if ref_acct not in _KNOWN_ACCOUNTS or ref_acct == acct_no:
+                    continue
+                if (acct_no, ref_acct) in rule12_pairs:
+                    continue
+                if n in script_norms(ref_acct):
+                    suppress_from(
+                        acct_no, {n},
+                        f"also in {ref_acct} (Notes-referenced account wins)",
+                    )
+                    break  # one suppression per row is enough
 
 
 def _default_output(input_path: str) -> str:
@@ -246,9 +690,18 @@ def main() -> None:
 
     scene_count = len(data.get("scene_breakdown", []))
 
-    # Enforce structural consistency (stunt/extras/wardrobe flow-through)
+    # Post-processing pipeline (order matters — suppress first, then inject, then dedup)
+    print("Suppressing self-flagged misrouted rows...")
+    _suppress_misrouted_rows(data)
+
+    print("Enforcing cross-reference flags...")
+    _enforce_cross_reference_flags(data)
+
     print("Running structural consistency checks...")
     _enforce_flow_through(data)
+
+    print("Running cross-account deduplication...")
+    _deduplicate_accounts(data)
 
     accounts = data.get("accounts", {})
     total_items = sum(len(v) for v in accounts.values())
