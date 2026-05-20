@@ -77,7 +77,7 @@ Each output spreadsheet contains:
 
 ## Status
 
-- Tool 1 (Script Breakdown → Spreadsheet) — functional, web-deployed
+- Tool 1 (Script Breakdown → Spreadsheet) — [live at http://3.21.29.86:5000](http://3.21.29.86:5000)
 - Tool 2 (Pricing engine with live vendor API integrations) — planned
 
 ---
