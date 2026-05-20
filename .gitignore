@@ -1,0 +1,32 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+*.env
+
+# Flask / app runtime
+instance/
+
+# Test output and input files
+*.xlsx
+*.pdf
+
+# Upload and temp directories
+uploads/
+temp/
+
+# Temp files from breakdown runs
+cinebudget_*/
+
+# OS
+.DS_Store
+Thumbs.db
