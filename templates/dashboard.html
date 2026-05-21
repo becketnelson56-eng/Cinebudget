@@ -106,25 +106,35 @@
     <!-- Main content -->
     <main class="main-content">
 
-      <!-- Budget tab -->
+      <!-- ── Budget tab ─────────────────────────────────────────── -->
       {% if active_tab == 'budget' %}
       <div class="content-panel">
         <div class="panel-header">
           <h2 class="panel-title">Budget</h2>
           <p class="panel-subtitle">Your live production budget, built from every input across the tool.</p>
         </div>
-        <div class="coming-soon">
-          <div class="coming-soon-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="32" height="32">
-              <path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z" clip-rule="evenodd"/>
-            </svg>
+        <div class="tab-layout">
+          <div class="tab-main">
+            <div class="coming-soon">
+              <div class="coming-soon-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="32" height="32">
+                  <path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <h3 class="coming-soon-title">Coming Soon</h3>
+              <p class="coming-soon-body">Your live production budget — populated automatically from Script Breakdown, Scheduling, and Deals inputs.</p>
+            </div>
           </div>
-          <h3 class="coming-soon-title">Coming Soon</h3>
-          <p class="coming-soon-body">Your live production budget — populated automatically from Script Breakdown, Scheduling, and Deals inputs.</p>
+          {{ how_it_works([
+            "Run a Script Breakdown to populate cost drivers from your screenplay.",
+            "Add deal memos via the Deals tab to populate negotiated rates.",
+            "Add scheduling data to fill shoot day counts and schedule-driven costs.",
+            "Your live budget updates automatically as each input is processed."
+          ]) }}
         </div>
       </div>
 
-      <!-- Script Breakdown tab -->
+      <!-- ── Script Breakdown tab ───────────────────────────────── -->
       {% elif active_tab == 'breakdown' %}
       <div class="content-panel">
         <div class="panel-header">
@@ -138,13 +148,15 @@
               <!-- State: upload -->
               <div id="uploadState">
                 <form id="breakdownForm" enctype="multipart/form-data">
+
+                  <!-- Input 1: Screenplay PDF -->
                   <div class="dropzone" id="dropzone">
                     <div class="dropzone-icon">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
                       </svg>
                     </div>
-                    <p class="dropzone-label">Drop your PDF here or <span class="dropzone-browse">browse</span></p>
+                    <p class="dropzone-label">Drop your screenplay PDF here or <span class="dropzone-browse">browse</span></p>
                     <p class="dropzone-hint">Screenplay PDFs only</p>
                     <input type="file" id="fileInput" name="file" accept=".pdf" class="file-input-hidden">
                   </div>
@@ -157,6 +169,32 @@
                     <span class="file-selected-name" id="fileName"></span>
                     <button type="button" class="file-clear-btn" id="fileClearBtn" title="Remove">&#x2715;</button>
                   </div>
+
+                  <!-- Info note -->
+                  <p class="merge-note">If you upload an existing budget, the breakdown will add new data without removing or reordering anything already in the spreadsheet.</p>
+
+                  <!-- Input 2: Optional existing budget XLSX -->
+                  <p class="dropzone-section-label">Optional: continue from existing budget</p>
+                  <div class="dropzone dropzone-secondary" id="xlsxDropzone">
+                    <div class="dropzone-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                      </svg>
+                    </div>
+                    <p class="dropzone-label">Drop an existing budget spreadsheet here or <span class="dropzone-browse">browse</span></p>
+                    <p class="dropzone-hint">Optional · .xlsx only</p>
+                    <input type="file" id="xlsxInput" name="existing_budget" accept=".xlsx" class="file-input-hidden">
+                  </div>
+                  <div class="file-selected" id="xlsxSelected" style="display:none;">
+                    <span class="file-selected-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                      </svg>
+                    </span>
+                    <span class="file-selected-name" id="xlsxFileName"></span>
+                    <button type="button" class="file-clear-btn" id="xlsxClearBtn" title="Remove">&#x2715;</button>
+                  </div>
+
                   <div class="run-controls">
                     <button type="submit" class="btn-primary btn-run" id="runBtn" disabled>
                       Run Breakdown
@@ -195,13 +233,14 @@
           </div>
           {{ how_it_works([
             "Upload your screenplay PDF.",
-            "AI extracts every production element scene by scene.",
-            "Extracted data flows directly into your Budget."
+            "Optionally upload an existing budget spreadsheet to continue from where you left off.",
+            "AI extracts every production cost driver scene by scene.",
+            "Extracted data flows into your Budget, merging with any existing entries."
           ]) }}
         </div>
       </div>
 
-      <!-- Scheduling tab -->
+      <!-- ── Scheduling tab ─────────────────────────────────────── -->
       {% elif active_tab == 'scheduling' %}
       <div class="content-panel">
         <div class="panel-header">
@@ -221,42 +260,108 @@
             </div>
           </div>
           {{ how_it_works([
-            "Upload your stripboard or Day-Out-of-Days.",
+            "Upload your stripboard or Day-Out-of-Days document.",
+            "Upload your existing budget spreadsheet.",
             "AI extracts shooting days and cast scheduling data.",
             "Schedule-driven costs flow into your Budget."
           ]) }}
         </div>
       </div>
 
-      <!-- Deals tab -->
+      <!-- ── Deals tab ──────────────────────────────────────────── -->
       {% elif active_tab == 'deals' %}
       <div class="content-panel">
         <div class="panel-header">
           <h2 class="panel-title">Deals</h2>
-          <p class="panel-subtitle">Cast and crew deal memo management.</p>
+          <p class="panel-subtitle">Upload a contract PDF and your budget spreadsheet to extract negotiated rates.</p>
         </div>
         <div class="tab-layout">
           <div class="tab-main">
-            <div class="coming-soon">
-              <div class="coming-soon-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="32" height="32">
-                  <path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/>
-                  <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z"/>
-                </svg>
+            <div class="upload-area" id="dealsUploadArea">
+
+              <!-- State: form -->
+              <div id="dealsFormState">
+                <form id="dealsForm" enctype="multipart/form-data">
+
+                  <!-- Input 1: Contract PDF -->
+                  <p class="dropzone-section-label">Deal Memo / Contract PDF</p>
+                  <div class="dropzone" id="dealsPdfDropzone">
+                    <div class="dropzone-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+                      </svg>
+                    </div>
+                    <p class="dropzone-label">Drop a contract PDF here or <span class="dropzone-browse">browse</span></p>
+                    <p class="dropzone-hint">Actor contracts, crew deal memos, location agreements</p>
+                    <input type="file" id="dealsPdfInput" name="contract" accept=".pdf" class="file-input-hidden">
+                  </div>
+                  <div class="file-selected" id="dealsPdfSelected" style="display:none;">
+                    <span class="file-selected-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                      </svg>
+                    </span>
+                    <span class="file-selected-name" id="dealsPdfName"></span>
+                    <button type="button" class="file-clear-btn" id="dealsPdfClearBtn" title="Remove">&#x2715;</button>
+                  </div>
+
+                  <!-- Info note -->
+                  <p class="merge-note">Extracted rates and terms will populate matching rows in your budget without touching existing data.</p>
+
+                  <!-- Input 2: Existing budget XLSX (required) -->
+                  <p class="dropzone-section-label">Existing Budget Spreadsheet</p>
+                  <div class="dropzone dropzone-secondary" id="dealsXlsxDropzone">
+                    <div class="dropzone-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                      </svg>
+                    </div>
+                    <p class="dropzone-label">Drop your existing budget spreadsheet here or <span class="dropzone-browse">browse</span></p>
+                    <p class="dropzone-hint">.xlsx only</p>
+                    <input type="file" id="dealsXlsxInput" name="budget" accept=".xlsx" class="file-input-hidden">
+                  </div>
+                  <div class="file-selected" id="dealsXlsxSelected" style="display:none;">
+                    <span class="file-selected-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                      </svg>
+                    </span>
+                    <span class="file-selected-name" id="dealsXlsxName"></span>
+                    <button type="button" class="file-clear-btn" id="dealsXlsxClearBtn" title="Remove">&#x2715;</button>
+                  </div>
+
+                  <div class="run-controls">
+                    <button type="submit" class="btn-primary btn-run" id="dealsBtn">
+                      Process Deal
+                    </button>
+                    <p class="run-note">AI will extract rates and terms from the contract and populate matching rows in your budget.</p>
+                  </div>
+                </form>
               </div>
-              <h3 class="coming-soon-title">Coming Soon</h3>
-              <p class="coming-soon-body">Deal memo tools are under development.</p>
+
+              <!-- State: coming soon -->
+              <div id="dealsComingSoonState" class="panel-state" style="display:none;">
+                <div class="coming-soon-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="32" height="32">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                  </svg>
+                </div>
+                <p class="coming-soon-title">Deal processing pipeline coming soon.</p>
+                <button class="btn-secondary" id="dealsBackBtn">Back</button>
+              </div>
+
             </div>
           </div>
           {{ how_it_works([
-            "Upload crew and cast deal memos.",
-            "AI extracts rates, fringes, and contract terms.",
-            "Negotiated figures flow into your Budget."
+            "Upload a contract or deal memo PDF (actor, crew, or location agreement).",
+            "Upload your existing budget spreadsheet.",
+            "AI extracts negotiated rates, terms, and fringe details from the contract.",
+            "Rates populate matching rows in your budget without touching existing data."
           ]) }}
         </div>
       </div>
 
-      <!-- Export tab -->
+      <!-- ── Export tab ─────────────────────────────────────────── -->
       {% elif active_tab == 'export' %}
       <div class="content-panel">
         <div class="panel-header">
@@ -276,7 +381,7 @@
             </div>
           </div>
           {{ how_it_works([
-            "Review your completed budget across all tabs.",
+            "Upload your completed budget spreadsheet.",
             "Choose your export format — Excel, PDF, or Movie Magic compatible.",
             "Download your production-ready budget document."
           ]) }}
@@ -288,18 +393,18 @@
   </div>
 
   <script>
-    // Only runs on the Script Breakdown tab (dropzone element present)
+    // ── Script Breakdown tab ──────────────────────────────────────
     const dropzone = document.getElementById('dropzone');
     if (dropzone) {
-      const fileInput     = document.getElementById('fileInput');
-      const fileSelected  = document.getElementById('fileSelected');
-      const fileName      = document.getElementById('fileName');
-      const fileClearBtn  = document.getElementById('fileClearBtn');
-      const runBtn        = document.getElementById('runBtn');
-      const form          = document.getElementById('breakdownForm');
-      let pollTimer       = null;
+      const fileInput    = document.getElementById('fileInput');
+      const fileSelected = document.getElementById('fileSelected');
+      const fileName     = document.getElementById('fileName');
+      const fileClearBtn = document.getElementById('fileClearBtn');
+      const runBtn       = document.getElementById('runBtn');
+      const form         = document.getElementById('breakdownForm');
+      let pollTimer      = null;
 
-      // ── File selection ────────────────────────────────────────
+      // ── PDF dropzone ──────────────────────────────────────────
       dropzone.addEventListener('click', () => fileInput.click());
       dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
       dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
@@ -319,12 +424,35 @@
         runBtn.disabled = false;
       }
 
-      function resetUpload() {
-        fileInput.value = '';
-        dropzone.style.display = 'flex';
-        fileSelected.style.display = 'none';
-        runBtn.disabled = true;
-        showState('upload');
+      // ── Optional XLSX dropzone ────────────────────────────────
+      const xlsxDropzone = document.getElementById('xlsxDropzone');
+      const xlsxInput    = document.getElementById('xlsxInput');
+      const xlsxSelected = document.getElementById('xlsxSelected');
+      const xlsxFileName = document.getElementById('xlsxFileName');
+      const xlsxClearBtn = document.getElementById('xlsxClearBtn');
+
+      xlsxDropzone.addEventListener('click', () => xlsxInput.click());
+      xlsxDropzone.addEventListener('dragover', (e) => { e.preventDefault(); xlsxDropzone.classList.add('dragover'); });
+      xlsxDropzone.addEventListener('dragleave', () => xlsxDropzone.classList.remove('dragover'));
+      xlsxDropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        xlsxDropzone.classList.remove('dragover');
+        const f = e.dataTransfer.files[0];
+        if (f && f.name.toLowerCase().endsWith('.xlsx')) setXlsxFile(f);
+      });
+      xlsxInput.addEventListener('change', () => { if (xlsxInput.files[0]) setXlsxFile(xlsxInput.files[0]); });
+      xlsxClearBtn.addEventListener('click', (e) => { e.stopPropagation(); resetXlsx(); });
+
+      function setXlsxFile(file) {
+        xlsxFileName.textContent = file.name;
+        xlsxDropzone.style.display = 'none';
+        xlsxSelected.style.display = 'flex';
+      }
+
+      function resetXlsx() {
+        xlsxInput.value = '';
+        xlsxDropzone.style.display = 'flex';
+        xlsxSelected.style.display = 'none';
       }
 
       // ── State switching ───────────────────────────────────────
@@ -338,6 +466,14 @@
       function showError(msg) {
         document.getElementById('errorMessage').textContent = msg;
         showState('error');
+      }
+
+      function resetUpload() {
+        fileInput.value = '';
+        dropzone.style.display = 'flex';
+        fileSelected.style.display = 'none';
+        runBtn.disabled = true;
+        showState('upload');
       }
 
       // ── Form submit ───────────────────────────────────────────
@@ -367,7 +503,7 @@
 
           if (json.status === 'done') {
             clearInterval(pollTimer);
-            window.location.href = '/download/' + jobId;  // attachment download, page stays
+            window.location.href = '/download/' + jobId;
             showState('success');
           } else if (json.status === 'error') {
             clearInterval(pollTimer);
@@ -383,7 +519,67 @@
 
       // ── Post-run buttons ──────────────────────────────────────
       document.getElementById('retryBtn').addEventListener('click', resetUpload);
-      document.getElementById('newBreakdownBtn').addEventListener('click', resetUpload);
+      document.getElementById('newBreakdownBtn').addEventListener('click', () => { resetUpload(); resetXlsx(); });
+    }
+
+    // ── Deals tab ─────────────────────────────────────────────────
+    const dealsForm = document.getElementById('dealsForm');
+    if (dealsForm) {
+      function makeDropzone(dropzoneEl, inputEl, selectedEl, nameEl, clearBtnEl, acceptFn) {
+        dropzoneEl.addEventListener('click', () => inputEl.click());
+        dropzoneEl.addEventListener('dragover', (e) => { e.preventDefault(); dropzoneEl.classList.add('dragover'); });
+        dropzoneEl.addEventListener('dragleave', () => dropzoneEl.classList.remove('dragover'));
+        dropzoneEl.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropzoneEl.classList.remove('dragover');
+          const f = e.dataTransfer.files[0];
+          if (f && acceptFn(f)) setDealFile(dropzoneEl, selectedEl, nameEl, f);
+        });
+        inputEl.addEventListener('change', () => {
+          if (inputEl.files[0]) setDealFile(dropzoneEl, selectedEl, nameEl, inputEl.files[0]);
+        });
+        clearBtnEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          inputEl.value = '';
+          dropzoneEl.style.display = 'flex';
+          selectedEl.style.display = 'none';
+        });
+      }
+
+      function setDealFile(dropzoneEl, selectedEl, nameEl, file) {
+        nameEl.textContent = file.name;
+        dropzoneEl.style.display = 'none';
+        selectedEl.style.display = 'flex';
+      }
+
+      makeDropzone(
+        document.getElementById('dealsPdfDropzone'),
+        document.getElementById('dealsPdfInput'),
+        document.getElementById('dealsPdfSelected'),
+        document.getElementById('dealsPdfName'),
+        document.getElementById('dealsPdfClearBtn'),
+        (f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')
+      );
+
+      makeDropzone(
+        document.getElementById('dealsXlsxDropzone'),
+        document.getElementById('dealsXlsxInput'),
+        document.getElementById('dealsXlsxSelected'),
+        document.getElementById('dealsXlsxName'),
+        document.getElementById('dealsXlsxClearBtn'),
+        (f) => f.name.toLowerCase().endsWith('.xlsx')
+      );
+
+      dealsForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        document.getElementById('dealsFormState').style.display = 'none';
+        document.getElementById('dealsComingSoonState').style.display = 'flex';
+      });
+
+      document.getElementById('dealsBackBtn').addEventListener('click', () => {
+        document.getElementById('dealsComingSoonState').style.display = 'none';
+        document.getElementById('dealsFormState').style.display = 'block';
+      });
     }
   </script>
 

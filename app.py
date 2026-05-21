@@ -19,6 +19,13 @@ app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
 USERNAME = os.environ.get('APP_USERNAME', 'admin')
 PASSWORD = os.environ.get('APP_PASSWORD', 'breakdown2024')
 
+# MERGE ARCHITECTURE — enforced when backend is built:
+# When a user uploads an existing .xlsx alongside a new PDF, the tool must NEVER
+# delete, overwrite, or reorder existing rows. It only adds new information into
+# blank Rate/Amount cells where a match is found, or appends new rows at the bottom
+# of the relevant account tab. Output must be saved as [original-name]-updated.xlsx
+# and must never overwrite the original file.
+
 # In-memory job store: job_id -> state dict
 # Keys: status ("running"|"done"|"error"), step, download_name, result_path, error
 _jobs: dict = {}
@@ -230,6 +237,13 @@ def download_result(job_id: str):
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{download_name}"'},
     )
+
+
+@app.route("/deals", methods=["POST"])
+def deals_route():
+    if "user" not in session:
+        return jsonify({"error": "Not authenticated."}), 401
+    return jsonify({"status": "coming_soon", "message": "Deal processing pipeline coming soon."})
 
 
 if __name__ == "__main__":
