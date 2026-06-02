@@ -234,6 +234,9 @@ a { color: inherit; text-decoration: none; }
 .sidebar-item.active .sidebar-link {
   color: var(--accent);
   background: var(--accent-dim);
+  border-left: 3px solid var(--accent);
+  padding-left: 9px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
 .sidebar-icon {
@@ -299,8 +302,8 @@ a { color: inherit; text-decoration: none; }
 
 .dropzone:hover,
 .dropzone.dragover {
-  border-color: rgba(200,169,110,0.5);
-  background: var(--accent-glow);
+  border-color: var(--accent);
+  background: var(--accent-dim);
 }
 
 .dropzone-icon { color: var(--text-dim); }
@@ -369,6 +372,7 @@ a { color: inherit; text-decoration: none; }
   align-self: flex-start;
   padding: 10px 28px;
   font-size: 14px;
+  min-width: 160px;
 }
 
 .run-note {
@@ -383,7 +387,7 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 64px 0;
+  padding: 28px 20px;
   text-align: center;
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);
@@ -423,6 +427,12 @@ a { color: inherit; text-decoration: none; }
 .tab-main .upload-area,
 .tab-main .coming-soon {
   flex: 1;
+}
+
+/* ── Centered tab layout (Budget / Export placeholder tabs) ─── */
+.tab-layout--centered {
+  align-items: center;
+  min-height: calc(100vh - var(--topbar-h) - 200px);
 }
 
 /* ── How It Works panel ──────────────────────────────────────── */
@@ -492,8 +502,8 @@ a { color: inherit; text-decoration: none; }
 }
 
 .hiw-step-text {
-  font-size: 12.5px;
-  color: var(--text-muted);
+  font-size: 13.5px;
+  color: #b2b5cc;
   line-height: 1.55;
   padding-top: 1px;
 }
@@ -589,8 +599,8 @@ a { color: inherit; text-decoration: none; }
 
 .dropzone-secondary:hover,
 .dropzone-secondary.dragover {
-  border-color: rgba(200,169,110,0.4);
-  background: var(--accent-glow);
+  border-color: var(--accent);
+  background: var(--accent-dim);
 }
 
 /* ── Section label above a dropzone ─────────────────────────── */
