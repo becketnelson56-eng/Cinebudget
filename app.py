@@ -255,7 +255,36 @@ def download_result(job_id: str):
 def deals_route():
     if "user" not in session:
         return jsonify({"error": "Not authenticated."}), 401
+    file = request.files.get("contract")
+    if not file or not file.filename:
+        return jsonify({"error": "Please upload a contract PDF before processing."}), 400
+    if not file.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Only PDF files are accepted. Please upload a .pdf file."}), 400
     return jsonify({"status": "coming_soon", "message": "Deal processing pipeline coming soon."})
+
+
+@app.route("/scheduling", methods=["POST"])
+def scheduling_route():
+    if "user" not in session:
+        return jsonify({"error": "Not authenticated."}), 401
+    file = request.files.get("schedule")
+    if not file or not file.filename:
+        return jsonify({"error": "Please upload a schedule document before processing."}), 400
+    if not file.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Only PDF files are accepted. Please upload a .pdf file."}), 400
+    return jsonify({"status": "coming_soon", "message": "Scheduling pipeline coming soon."})
+
+
+# ── Global error handlers ─────────────────────────────────────────────────────
+
+@app.errorhandler(404)
+def not_found(e):
+    return render_template("error.html", code=404, message="Page not found."), 404
+
+
+@app.errorhandler(500)
+def server_error(e):
+    return render_template("error.html", code=500, message="An unexpected error occurred. Please try again."), 500
 
 
 if __name__ == "__main__":

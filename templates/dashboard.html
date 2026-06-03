@@ -304,6 +304,7 @@
                   </div>
 
                   <div class="run-controls">
+                    <p class="form-error" id="schedFormError" style="display:none;"></p>
                     <button type="submit" class="btn-primary btn-run" id="schedBtn">
                       Process Schedule
                     </button>
@@ -397,6 +398,7 @@
                   </div>
 
                   <div class="run-controls">
+                    <p class="form-error" id="dealsFormError" style="display:none;"></p>
                     <button type="submit" class="btn-primary btn-run" id="dealsBtn">
                       Process Deal
                     </button>
@@ -638,6 +640,14 @@
 
       schedForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        const pdfInput = document.getElementById('schedPdfInput');
+        const errEl = document.getElementById('schedFormError');
+        if (!pdfInput.files[0]) {
+          errEl.textContent = 'Please upload a schedule document before processing.';
+          errEl.style.display = 'block';
+          return;
+        }
+        errEl.style.display = 'none';
         document.getElementById('schedFormState').style.display = 'none';
         document.getElementById('schedComingSoonState').style.display = 'flex';
       });
@@ -698,6 +708,14 @@
 
       dealsForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        const pdfInput = document.getElementById('dealsPdfInput');
+        const errEl = document.getElementById('dealsFormError');
+        if (!pdfInput.files[0]) {
+          errEl.textContent = 'Please upload a contract PDF before processing.';
+          errEl.style.display = 'block';
+          return;
+        }
+        errEl.style.display = 'none';
         document.getElementById('dealsFormState').style.display = 'none';
         document.getElementById('dealsComingSoonState').style.display = 'flex';
       });

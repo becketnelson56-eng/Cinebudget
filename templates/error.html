@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cinebudget — Error</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-body">
+  <div class="login-container" style="gap: 16px;">
+    <div class="login-logo">
+      <span class="login-logo-mark">CB</span>
+    </div>
+    <h1 class="login-title" style="font-size: 32px; color: var(--text-muted);">{{ code }}</h1>
+    <p class="panel-subtitle" style="text-align: center;">{{ message }}</p>
+    <a href="{{ url_for('dashboard') }}" class="btn-primary btn-full" style="text-align: center; display: block; padding: 10px 20px; margin-top: 8px;">Back to Cinebudget</a>
+  </div>
+</body>
+</html>
