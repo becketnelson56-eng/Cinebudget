@@ -5,9 +5,11 @@ import sys
 import tempfile
 import threading
 import uuid
+from functools import wraps
 
 import anthropic
 from flask import Flask, Response, jsonify, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from api_client import get_breakdown
 from breakdown import _deduplicate_accounts, _enforce_cross_reference_flags, _enforce_flow_through, _suppress_misrouted_rows
@@ -17,7 +19,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
 
 USERNAME = os.environ.get('APP_USERNAME', 'admin')
-PASSWORD = os.environ.get('APP_PASSWORD', 'breakdown2024')
+_PASSWORD_HASH = generate_password_hash(os.environ.get('APP_PASSWORD', 'breakdown2024'))
 
 # MERGE ARCHITECTURE — enforced when backend is built:
 # When a user uploads an existing .xlsx alongside a new PDF, the tool must NEVER
@@ -30,6 +32,17 @@ PASSWORD = os.environ.get('APP_PASSWORD', 'breakdown2024')
 # Keys: status ("running"|"done"|"error"), step, download_name, result_path, error
 _jobs: dict = {}
 _jobs_lock = threading.Lock()
+
+
+# ── Auth decorator ────────────────────────────────────────────────────────────
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user" not in session:
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated
 
 
 # ── Pipeline runner ───────────────────────────────────────────────────────────
@@ -116,7 +129,7 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        if username == USERNAME and password == PASSWORD:
+        if username == USERNAME and check_password_hash(_PASSWORD_HASH, password):
             session["user"] = username
             return redirect(url_for("dashboard"))
         error = "Invalid credentials."
@@ -132,9 +145,8 @@ def logout():
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
 @app.route("/dashboard")
+@login_required
 def dashboard():
-    if "user" not in session:
-        return redirect(url_for("login"))
     tab = request.args.get("tab", "budget")
     valid_tabs = {"budget", "breakdown", "scheduling", "deals", "export"}
     if tab not in valid_tabs:
