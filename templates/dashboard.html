@@ -471,6 +471,7 @@
       const runBtn       = document.getElementById('runBtn');
       const form         = document.getElementById('breakdownForm');
       let pollTimer      = null;
+      let timeoutTimer   = null;
 
       // ── PDF dropzone ──────────────────────────────────────────
       dropzone.addEventListener('click', () => fileInput.click());
@@ -541,6 +542,7 @@
         dropzone.style.display = 'flex';
         fileSelected.style.display = 'none';
         runBtn.disabled = true;
+        clearTimeout(timeoutTimer);
         showState('upload');
       }
 
@@ -561,6 +563,10 @@
         }
 
         pollTimer = setInterval(() => pollStatus(jobId), 2000);
+        timeoutTimer = setTimeout(() => {
+          clearInterval(pollTimer);
+          showError('Processing timed out. The file may be too large or the server may be busy. Please try again.');
+        }, 180000);
       });
 
       // ── Status polling ────────────────────────────────────────
@@ -571,16 +577,19 @@
 
           if (json.status === 'done') {
             clearInterval(pollTimer);
+            clearTimeout(timeoutTimer);
             window.location.href = '/download/' + jobId;
             showState('success');
           } else if (json.status === 'error') {
             clearInterval(pollTimer);
+            clearTimeout(timeoutTimer);
             showError(json.error || 'Breakdown failed.');
           } else {
             document.getElementById('progressStep').textContent = json.step || 'Processing…';
           }
         } catch (err) {
           clearInterval(pollTimer);
+          clearTimeout(timeoutTimer);
           showError('Lost connection to the server.');
         }
       }

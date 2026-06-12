@@ -84,10 +84,7 @@ def _run_pipeline(job_id: str, pdf_path: str, pdf_bytes: bytes, tmp_dir: str) ->
     print(f"{tag} Extraction complete: {scene_count} scene(s), {total_items} line item(s)", flush=True)
 
     if scene_count == 0 and total_items == 0:
-        return fail(
-            "Claude returned 0 scenes and 0 line items — the PDF may not be a screenplay, "
-            "or all API responses were empty. Check the terminal for per-call details."
-        )
+        return fail("No screenplay content was detected in this file. Please upload a properly formatted screenplay PDF.")
 
     # Steps 2–3 — post-processing and write
     try:
