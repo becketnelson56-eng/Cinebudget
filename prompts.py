@@ -252,6 +252,14 @@ NAMED BRANDS AND PRODUCT CLEARANCE (account 6200):
   used, both master use and sync rights are required. Music supervisor must identify all tracks
   before production — common and expensive oversight.' Do not omit this row just because the track
   is unidentified — that is the most common cause of sync licensing budget surprises.
+- DO NOT GENERATE 6200 FOR POST-PRODUCTION MUSIC: Atmospheric sequences, montage sequences,
+  and voice-over narration with no described on-set music source do NOT require a 6200 flag.
+  Music added in post-production (score, temp music, licensed music added in the edit) is handled
+  in the post-production music budget (account 5400) and requires no production-stage clearance.
+  6200 sync licensing rows must ONLY be generated when the script explicitly describes music
+  playing on camera — a named song, a specific source (radio, speaker, TV, live performer), or a
+  song title mentioned in dialogue or action lines. Do not generate 6200 rows as a general
+  precaution for scenes that could theoretically have music added later.
 
 PRE-PRODUCTION FABRICATION COSTS:
 - When the script or extraction notes indicate that a prop, photograph, painting, or set piece must
@@ -375,6 +383,12 @@ ACCOUNT ROUTING — PROPS vs. ART DEPT vs. SET DECORATION (MUTUAL EXCLUSION):
   A borderline note in the Notes field is good — but after flagging, always place the item in the
   correct account based on the rule. Do NOT leave an item in the wrong account with a hedge note.
   Breakaway/destructible set pieces that cast crash through: 2500, not 2400.
+- SELF-FLAGGED ROUTING: A Notes field that says 'should also have a 2500 row', 'if cast contacts
+  this move to 2500', 'should be in 2500', or any equivalent conditional hedge is never acceptable.
+  If the script describes cast interaction with an item, place it in 2500 NOW — not as a note in
+  a 2400 row. The rule is: decide based on the script and commit. If hands touch it on camera →
+  2500. If cast never touches it → 2400. Hedge notes that defer the routing decision are routing
+  errors and will be caught in post-processing.
 
 MULTI-ACTION CAST-INTERACTIVE SET PIECES (account 2500):
 - Any set piece that serves as the primary surface or object for three or more scripted cast
@@ -533,6 +547,7 @@ custom prop photo/artwork requiring fabrication shoot with cast -> Set Operation
 set piece with 3+ scripted cast actions (desk, table, surface) -> Props (2500): dedicated row for the set piece itself, separate from props placed on/in it
 notes referencing another account ('see 3000', 'flag for 6200') -> that account: generate a full row there — cross-references are not substitutes
 costume item handled on camera -> Wardrobe (3300) ONLY: add handling note in 3300 Notes — NEVER create a 2500 row for a costume
+2400 row Notes say 'should also have a 2500' or 'should be in 2500' → place item in 2500 NOW — conditional Notes are routing errors; if cast touches it on camera, commit to 2500; no hedge notes
 INT. [VEHICLE] - MOVING (car, taxi, bus, truck, van, ambulance) -> Camera (2600): process trailer / camera car row — applies to ALL moving vehicle interiors, not just chase sequences
 weather/environmental practical FX (rain, snow, fog, mist, haze, smoke, wind) in practical_fx array -> Mechanical FX (3000): dedicated weather rig row per effect type; large rigs may also need Electric (2700)
 practical water on set (running shower, tap, hose, fountain, pool) -> Mechanical FX (3000): water rigging and pressure continuity row — always required even on practical locations
@@ -544,6 +559,7 @@ scripted wounds / blood / cuts / bruises / injury makeup / physical condition on
 INT. practical location (apartment, office, restaurant, bar, hospital, school, hallway, elevator) not studio stage -> Locations (3500): facility rental agreement row required
 cast Amount = scene count: count only scenes where character is explicitly present or has dialogue/action — NEVER count O.S. mentions, dialogue references, or implied presence
 source/ambient music in a location ('music blares', 'song plays', 'radio on', 'jukebox') → Legal (6200): sync licensing row required even if no specific track is named
+atmospheric sequence / montage / V.O. narration with no described on-set music source → NO 6200 row — post-production score (account 5400) requires no production-stage clearance; 6200 only when music explicitly plays on set
 multi-cast stunt gag (2+ principals simultaneously impacted) → Stunts & Safety (2950): Stunt Coordinator + Safety Officer + Stunt Performer standby rows — all three required
 montage scene location / brief single-shot pickup location → Locations (3500): location row required — brevity does not reduce the facility rental requirement
 'not applicable' / 'no [element] identified' placeholder → DO NOT GENERATE — only extract rows for elements actually present in the script

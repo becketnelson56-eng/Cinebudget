@@ -257,6 +257,8 @@ def _enforce_flow_through(data: dict) -> None:
         "fountain": ("Practical fountain — water effect, continuity management", "Days"),
         "pool": ("Practical water pool/tank — water rigging and drainage", "Rental-Day"),
     }
+    # Firearm/armorer items in practical_fx must not trigger 3000 — they route to 2950
+    _GUNSHOT_EXCLUSIONS = frozenset({"gunshot", "firearm discharge", "blank fire", "muzzle flash"})
     all_practical_fx = [(s, fx) for s in scenes for fx in (s.get("practical_fx") or []) if fx]
     if all_practical_fx:
         script_3000 = [r for r in accounts.get("3000", []) if r.get("populated_by") == "SCRIPT"]
@@ -265,6 +267,8 @@ def _enforce_flow_through(data: dict) -> None:
         covered_fx: set[str] = set()
         for scene, fx in all_practical_fx:
             fx_lower = fx.lower()
+            if any(excl in fx_lower for excl in _GUNSHOT_EXCLUSIONS):
+                continue
             for kw, (desc, unit) in _PRACTICAL_FX_TRIGGERS.items():
                 if kw in fx_lower and kw not in covered_fx and kw not in existing_3000_text:
                     covered_fx.add(kw)
@@ -355,6 +359,103 @@ def _enforce_flow_through(data: dict) -> None:
                 f"row(s) — flagged in 2500 Props Notes."
             )
 
+    # ── AHA Compliance → 3200 ────────────────────────────────────────────────
+    # Whenever an animal is scripted as injured/harmed/killed, an AHA compliance
+    # officer row is required in 3200 (union requirement, separate from wrangler).
+    _AHA_INJURY_KEYWORDS = frozenset({"shot", "harmed", "killed", "injured", "wounded"})
+    aha_triggered = False
+    for row in accounts.get("3900", []):
+        notes_lower = (row.get("notes") or "").lower()
+        desc_lower = (row.get("description") or "").lower()
+        combined = notes_lower + " " + desc_lower
+        if any(kw in combined for kw in _AHA_INJURY_KEYWORDS):
+            aha_triggered = True
+            break
+    if not aha_triggered:
+        for scene in scenes:
+            for animal_entry in (scene.get("animals") or []):
+                entry_lower = str(animal_entry).lower()
+                if any(kw in entry_lower for kw in _AHA_INJURY_KEYWORDS):
+                    aha_triggered = True
+                    break
+            if aha_triggered:
+                break
+    if aha_triggered:
+        existing_3200_text = " ".join(
+            r.get("description", "").lower()
+            for r in accounts.get("3200", [])
+            if r.get("populated_by") == "SCRIPT"
+        )
+        if "american humane" not in existing_3200_text and "aha" not in existing_3200_text:
+            accounts.setdefault("3200", []).append({
+                "account_no": None,
+                "description": "American Humane Association compliance officer — animal scripted as injured/killed on camera",
+                "amount": 1,
+                "unit_type": "Days",
+                "populated_by": "SCRIPT",
+                "script_page": None,
+                "script_quote": "",
+                "notes": (
+                    "AHA representative required on set for all scenes involving the animal "
+                    "in a potentially harmful scenario. Coordinate with wrangler and production attorney."
+                ),
+                "confidence": "High",
+            })
+            print(
+                "  [flow-through] Injected 3200 AHA compliance officer row — "
+                "animal scripted as injured/killed on camera."
+            )
+
+    # ── Picture Car Electrical → 2700 ────────────────────────────────────────
+    # When a 2500 picture car Notes field references 2700 or mentions a working
+    # light bar / electrical rig, auto-inject a 2700 SCRIPT row.
+    _PICTURE_CAR_ELECTRICAL_TRIGGERS = ("coordinate with 2700", "light bar", "working electrical")
+    for prop_row in accounts.get("2500", []):
+        if prop_row.get("populated_by") != "SCRIPT":
+            continue
+        notes_lower = (prop_row.get("notes") or "").lower()
+        if not any(phrase in notes_lower for phrase in _PICTURE_CAR_ELECTRICAL_TRIGGERS):
+            continue
+        existing_2700_text = " ".join(
+            r.get("description", "").lower()
+            for r in accounts.get("2700", [])
+            if r.get("populated_by") == "SCRIPT"
+        )
+        if "light bar" in existing_2700_text or "picture car" in existing_2700_text:
+            continue
+        veh_desc = prop_row.get("description", "picture vehicle")
+        if "light bar" in notes_lower:
+            elec_desc = (
+                "Practical light bar rigging — police/sheriff patrol car picture car, "
+                "working siren and light bar required on camera"
+            )
+            elec_notes = (
+                "Coordinate with picture car supplier on whether light bar is functional. "
+                "If non-functional, practical electrical rigging required. Confirm with Gaffer."
+            )
+        else:
+            elec_desc = f"Practical electrical rigging — working on-camera electrical for {veh_desc}"
+            elec_notes = (
+                "Picture car Notes flagged coordination with 2700 for working on-camera electrical. "
+                "Confirm rigging requirements with Gaffer and picture car supplier."
+            )
+        accounts.setdefault("2700", []).append({
+            "account_no": None,
+            "description": elec_desc,
+            "amount": 1,
+            "unit_type": "Rental-Day",
+            "populated_by": "SCRIPT",
+            "script_page": prop_row.get("script_page"),
+            "script_quote": "",
+            "notes": elec_notes,
+            "confidence": "Medium",
+        })
+        print(
+            f"  [flow-through] Injected 2700 electrical row for picture car "
+            f"'{veh_desc[:60]}' — Notes flagged electrical/light bar coordination."
+        )
+        break  # one electrical row per run is sufficient
+
 
 # ── Patch 1: suppress self-flagged misrouted rows ─────────────────────────────
 
@@ -372,6 +473,10 @@ _MISROUTED_PHRASES = (
     "move to 2500",
     "move to 3300",
     "move to 3900",
+    "should also have a 2500",
+    "should have a 2500",
+    "should be in 2500",
+    "should be moved to 2500",
 )
 
 
@@ -406,7 +511,14 @@ def _suppress_misrouted_rows(data: dict) -> None:
 
 # ── Patch 3: enforce cross-reference flags → 2500 ────────────────────────────
 
-_CROSS_REF_TRIGGERS = ("2500 row is required", "dedicated 2500")
+_CROSS_REF_TRIGGERS = (
+    "2500 row is required",
+    "dedicated 2500",
+    "should also have a 2500",
+    "should have a 2500",
+    "should be in 2500",
+    "should be moved to 2500",
+)
 
 
 def _enforce_cross_reference_flags(data: dict) -> None:
@@ -691,11 +803,11 @@ def main() -> None:
     scene_count = len(data.get("scene_breakdown", []))
 
     # Post-processing pipeline (order matters — suppress first, then inject, then dedup)
-    print("Suppressing self-flagged misrouted rows...")
-    _suppress_misrouted_rows(data)
-
     print("Enforcing cross-reference flags...")
     _enforce_cross_reference_flags(data)
+
+    print("Suppressing self-flagged misrouted rows...")
+    _suppress_misrouted_rows(data)
 
     print("Running structural consistency checks...")
     _enforce_flow_through(data)
