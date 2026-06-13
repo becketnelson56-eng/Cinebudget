@@ -456,6 +456,133 @@ def _enforce_flow_through(data: dict) -> None:
         )
         break  # one electrical row per run is sufficient
 
+    # ── Licensed Armorer → 2950 ───────────────────────────────────────────────
+    # When any 2500 Props row Notes flag 'armorer required' or 'licensed armorer',
+    # verify a 2950 armorer row exists. Generate one if not — SAG-AFTRA requirement.
+    _ARMORER_TRIGGERS = ("armorer required", "licensed armorer")
+    armorer_props = [
+        r for r in accounts.get("2500", [])
+        if r.get("populated_by") == "SCRIPT"
+        and any(phrase in (r.get("notes") or "").lower() for phrase in _ARMORER_TRIGGERS)
+    ]
+    if armorer_props:
+        existing_2950_text = " ".join(
+            r.get("description", "").lower()
+            for r in accounts.get("2950", [])
+            if r.get("populated_by") == "SCRIPT"
+        )
+        if "armorer" not in existing_2950_text:
+            accounts.setdefault("2950", []).append({
+                "account_no": None,
+                "description": (
+                    "Licensed Armorer — prop firearms on set. "
+                    "Required per SAG-AFTRA and production insurance standards."
+                ),
+                "amount": 1,
+                "unit_type": "Days",
+                "populated_by": "SCRIPT",
+                "script_page": armorer_props[0].get("script_page"),
+                "script_quote": "",
+                "notes": (
+                    "Auto-generated from 2500 firearms row(s) — 'armorer required' flagged in Notes. "
+                    "Armorer must be present for all scenes involving prop firearms. "
+                    "One row covers entire production — adjust Days to shoot days involving firearms."
+                ),
+                "confidence": "High",
+            })
+            print(
+                f"  [flow-through] Injected 2950 Licensed Armorer row — "
+                f"flagged in {len(armorer_props)} 2500 Props Notes field(s)."
+            )
+
+    # ── Welfare Worker (minor extras) → 3200 ─────────────────────────────────
+    # When any 3900 Background row Notes flag minors/children, verify a 3200
+    # welfare worker row exists. Required when minors are on set.
+    _MINOR_TRIGGERS = ("minor", "child extras", "welfare worker", "children required")
+    welfare_trigger_rows = [
+        r for r in accounts.get("3900", [])
+        if r.get("populated_by") == "SCRIPT"
+        and any(phrase in (r.get("notes") or "").lower() for phrase in _MINOR_TRIGGERS)
+    ]
+    if welfare_trigger_rows:
+        existing_3200_text = " ".join(
+            r.get("description", "").lower()
+            for r in accounts.get("3200", [])
+            if r.get("populated_by") == "SCRIPT"
+        )
+        if "welfare" not in existing_3200_text and "studio teacher" not in existing_3200_text:
+            trigger = welfare_trigger_rows[0]
+            scene_ref = trigger.get("description", "")
+            accounts.setdefault("3200", []).append({
+                "account_no": None,
+                "description": (
+                    f"On-set Welfare Worker / Studio Teacher — minor extras present, "
+                    f"{scene_ref[:60]}"
+                ),
+                "amount": 1,
+                "unit_type": "Days",
+                "populated_by": "SCRIPT",
+                "script_page": trigger.get("script_page"),
+                "script_quote": "",
+                "notes": (
+                    "Auto-generated: 3900 Background row Notes flagged minor extras. "
+                    "Required when minor background performers are present. "
+                    "Confirm minor headcount with AD — welfare worker-to-minor ratio may apply per state labor law."
+                ),
+                "confidence": "High",
+            })
+            print(
+                "  [flow-through] Injected 3200 Welfare Worker / Studio Teacher row — "
+                "minor extras flagged in 3900 Background Notes."
+            )
+
+    # ── Suppress unsupported pre-production photography 3200 rows ────────────
+    # Claude sometimes generates a pre-production photography/fabrication row in
+    # 3200 as a blanket placeholder. Only generate this row when the script
+    # explicitly describes a custom fabricated photograph, artwork, or photo
+    # double session. If no trigger exists, suppress the row.
+    _PREPHOTO_TRIGGER_KW = frozenset({
+        "custom photograph", "photo double", "pre-production shoot", "fabricated portrait",
+        "fabricated photograph", "prop photograph", "photo session",
+    })
+    _PREPHOTO_ROW_KW = ("pre-production", "fabrication", "photography session", "fabrication session")
+    prephoto_rows = [
+        r for r in accounts.get("3200", [])
+        if r.get("populated_by") == "SCRIPT"
+        and any(kw in (r.get("description") or "").lower() for kw in _PREPHOTO_ROW_KW)
+    ]
+    if prephoto_rows:
+        # Check if any scene breakdown or any account row contains a trigger keyword
+        all_text = " ".join(
+            " ".join([
+                " ".join(str(f) for f in (s.get("flags") or [])),
+                " ".join(str(p) for p in (s.get("props") or [])),
+                s.get("wardrobe_notes") or "",
+            ])
+            for s in scenes
+        )
+        for acct_no, rows in accounts.items():
+            for r in rows:
+                all_text += " " + (r.get("notes") or "") + " " + (r.get("description") or "")
+        all_text_lower = all_text.lower()
+        has_trigger = any(kw in all_text_lower for kw in _PREPHOTO_TRIGGER_KW)
+        if not has_trigger:
+            original_count = len(accounts.get("3200", []))
+            accounts["3200"] = [
+                r for r in accounts.get("3200", [])
+                if not (
+                    r.get("populated_by") == "SCRIPT"
+                    and any(kw in (r.get("description") or "").lower() for kw in _PREPHOTO_ROW_KW)
+                )
+            ]
+            removed = original_count - len(accounts["3200"])
+            if removed:
+                print(
+                    f"  [flow-through] Suppressed {removed} pre-production photography 3200 "
+                    f"row(s) — no script trigger found (no custom photograph, photo double, "
+                    f"or fabricated portrait in script)."
+                )
+
 
 # ── Patch 1: suppress self-flagged misrouted rows ─────────────────────────────
 
@@ -553,17 +680,24 @@ def _enforce_cross_reference_flags(data: dict) -> None:
             if not n or n in _existing_norms() or n in seen_norms:
                 continue
             seen_norms.add(n)
+            # Build a human-readable description — strip any trailing detail after the first dash
+            # so the user sees the item name, not internal system trigger language.
+            item_name = re.split(r"[—–]|\s\(", desc)[0].strip() or desc.strip()
             injected.append({
                 "account_no": None,
-                "description": desc,
+                "description": (
+                    f"{item_name} — auto-populated from set decoration cross-reference. "
+                    f"Verify details with Props Master."
+                ),
                 "amount": 1,
                 "unit_type": "Allow",
                 "populated_by": "SCRIPT",
                 "script_page": row.get("script_page"),
                 "script_quote": row.get("script_quote", ""),
                 "notes": (
-                    f"Auto-generated: {acct_no} Notes flagged '2500 row is required' or "
-                    f"'dedicated 2500'. Verify routing and description with Props department."
+                    f"Auto-generated from {acct_no} cross-reference flag. "
+                    f"Original description: '{desc[:80]}'. "
+                    f"Verify routing and item details with Props Master and Set Decorator."
                 ),
                 "confidence": row.get("confidence", "Medium"),
             })

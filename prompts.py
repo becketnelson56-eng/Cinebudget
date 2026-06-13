@@ -241,8 +241,14 @@ NAMED BRANDS AND PRODUCT CLEARANCE (account 6200):
 - MUSIC SYNC LICENSING: Any song or music track played on camera (even briefly) — on a radio,
   phone, speaker, TV, or performed live — requires a 6200 clearance flag if the track is a real
   copyrighted work. Description: 'Music sync licensing — [song/track description if known]',
-  unit_type = Allow. Notes: 'Sync license required for any copyrighted track played on camera.
-  Common and expensive oversight — confirm with music supervisor before production.'
+  unit_type = Allow. Notes: 'Music rights clearance IS required — confirm clearance approach with
+  music supervisor before production. When a named work is explicitly performed on camera by a
+  named performer or ensemble, do NOT use "may be required" language — clearance is required (or
+  must be confirmed not required). PUBLIC DOMAIN NOTE: if the composition is in the public domain,
+  sync fees for the composition itself are waived; however, if a commercial recording is used,
+  master use rights for that specific recording ARE still required. If performed live on set by a
+  live ensemble, a live-performance license may also apply — music supervisor must confirm the
+  correct clearance approach before production.'
 - SOURCE / AMBIENT MUSIC: Any scripted description of music playing in a location — 'music blares',
   'a song plays', 'the radio is on', 'music from speakers', 'jukebox plays', 'background music' —
   MUST generate a 6200 sync licensing flag even if no specific track is named. The specific track
@@ -471,6 +477,12 @@ WEATHER AND ENVIRONMENTAL PRACTICAL FX (account 3000):
   Running tap/faucet: Description: 'Practical tap/faucet — running water on camera', unit_type = Days.
 - Note: large-scale fog or rain rigs may also require Electric (2700) coordination for rigging
   power. Generate a 2700 row as well when the rig's scale implies electrical department involvement.
+- NATURAL LIGHT CONDITIONS ARE NOT PRACTICAL FX: Moonlight, sunlight, overcast sky, golden hour,
+  and all other ambient natural light conditions must NOT be listed in the practical_fx array and
+  must NOT generate a 3000 Mechanical FX row. These are not FX department items — they are natural
+  ambient light conditions. If supplemental lighting is needed on set to simulate or enhance a
+  natural light condition (e.g., a large HMI to simulate moonlight coming through a window),
+  that cost belongs in 2700 Electric, not 3000. Do not confuse natural light with practical FX.
 
 MOVING VEHICLE INTERIOR PHOTOGRAPHY (account 2600):
 - Any scene with a slug line of the form INT. [VEHICLE] - MOVING (car, bus, truck, taxi, van,
@@ -502,6 +514,33 @@ VISUAL IMPOSSIBILITY AND REALITY TRANSITIONS (account 3100):
   shifts or dream logic where physics do not apply (a character falling upward, walls melting,
   impossible geometry), simultaneous appearance in contradictory locations, and temporal reversals
   shown visually on screen.
+
+SPECIALIST TECHNICAL ADVISORS (account 3200):
+- When a script is set in a specialized institutional, military, legal, medical, or technical
+  environment, and three or more account rows across different department tabs (e.g., 3300
+  Wardrobe, 2500 Props, 2950 Stunts, 3500 Locations) all reference the same specialist advisor
+  type (e.g., 'military advisor', 'medical advisor', 'legal advisor', 'firearms consultant'),
+  generate a dedicated 3200 SCRIPT row for that advisor role.
+- Description: '[Role] Technical Advisor — [specialty area]', unit_type = Days. Notes: 'Required
+  across multiple departments. Coordinate advisor placement with relevant department heads and
+  production. For military advisors, contact DoD Entertainment Media Office or equivalent.'
+- The trigger is 3+ rows from different accounts referencing the same advisor by role type.
+  Individual Notes cross-references are not sufficient — the advisor must be a recurring
+  dependency across the production to warrant a standalone budget line in 3200.
+
+ON-SCREEN TITLES AND GRAPHICS (account 5500):
+- Any explicit on-screen title direction in the screenplay — SUBTITLE:, SUPER:, TITLE CARD:,
+  LOWER THIRD:, or equivalent — must generate a 5500 Titles SCRIPT row. These are production
+  deliverables requiring design, director approval, and post delivery.
+- Do NOT leave scripted on-screen graphics only in Scene Breakdown Notes. A Note that goes
+  nowhere is not a breakdown. The 5500 row is the cost placeholder for the titles package.
+- Description: 'On-screen subtitle / title card graphics — [brief description of what appears
+  on screen]', unit_type = Allow, Confidence = High. Notes: 'Must be designed, director-approved,
+  and delivered as post assets. Coordinate with main titles package or handle as standalone
+  lower-third graphics. Number of scripted cards: [count].'
+- One 5500 row can cover all scripted subtitle/title card instances in the same project unless
+  they require significantly different treatment (e.g., animated main title vs. plain location
+  cards).
 
 CONFIDENCE LEVELS:
 - High: item explicitly named in script.
@@ -563,4 +602,12 @@ atmospheric sequence / montage / V.O. narration with no described on-set music s
 multi-cast stunt gag (2+ principals simultaneously impacted) → Stunts & Safety (2950): Stunt Coordinator + Safety Officer + Stunt Performer standby rows — all three required
 montage scene location / brief single-shot pickup location → Locations (3500): location row required — brevity does not reduce the facility rental requirement
 'not applicable' / 'no [element] identified' placeholder → DO NOT GENERATE — only extract rows for elements actually present in the script
+prop firearm / weapon requiring armorer in 2500 Notes → Stunts & Safety (2950): Licensed Armorer row — one row covers production; 'armorer required' in Notes is not a substitute for the row
+minor extras / child background performers → Set Operations (3200): Welfare Worker / Studio Teacher row required — generate alongside 3900 Background row; both must exist
+3+ rows across different accounts referencing same specialist advisor type → Set Operations (3200): technical advisor row — military, medical, legal, or firearms advisor
+SUBTITLE / SUPER / TITLE CARD / LOWER THIRD direction in screenplay → Titles (5500): on-screen graphics row — do not leave scripted titles as Scene Breakdown note only
+moonlight / sunlight / golden hour / overcast → NOT practical FX and NOT 3000 — natural ambient light belongs in 2700 Electric notes if supplemental lighting required
+pre-production photography / fabrication session 3200 row with no 'custom photograph', 'photo double', or 'fabricated portrait' trigger → DO NOT GENERATE — not a default placeholder
+auto-generated 2500 cross-reference row → Description must be human-readable item name from triggering row — never expose internal 'Notes flagged...' trigger language in Description field
+named composition performed on camera → Legal (6200): clearance IS required — not 'may be required'; note public domain status of composition separately from master use rights for any recording
 """
