@@ -89,8 +89,8 @@ def _run_pipeline(job_id: str, pdf_path: str, pdf_bytes: bytes, tmp_dir: str) ->
     # Steps 2–3 — post-processing and write
     try:
         set_step("Running structural consistency checks…")
-        _suppress_misrouted_rows(data)
         _enforce_cross_reference_flags(data)
+        _suppress_misrouted_rows(data)
         _enforce_flow_through(data)
         _deduplicate_accounts(data)
 
