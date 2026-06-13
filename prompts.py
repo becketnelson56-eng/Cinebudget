@@ -96,6 +96,13 @@ EXTRACTION RULES:
 - One script element can generate multiple account rows (car chase = Props + Stunts + Camera).
 - Period settings apply to ALL items in that scene: wardrobe, props, set dressing all need period versions.
 - Dialogue alone rarely generates costs. Focus on action lines, scene headings, parentheticals.
+- NAMED ROLES WITHOUT DIALOGUE: Any character with a named role — including a functional title
+  (Motorman, Guard, Sentry, Driver, Operator, Lookout) — requires a 1600 Talent row when the
+  character has a scripted individual action, death, or stunt gag described in the action lines,
+  even with no dialogue. The test is not dialogue — it is whether the script describes that
+  specific character's individual action. A character named or titled in the action lines who is
+  'ripped apart', 'shot', 'slammed into a wall', 'grabs the controls', or similar has a castable
+  role and requires a 1600 row. Do not omit 1600 rows solely because the character has no lines.
 - EXT. + public space = location permit row required.
 - LOCATION ROWS — EVERY DISTINCT HEADING: Every distinct slug line location in the script
   requires a 3500 row. This includes montage locations, single-shot pickups, and brief scenes.
@@ -213,6 +220,11 @@ ANIMALS ON SET:
 PICTURE CARS / STORY VEHICLES:
 - Any vehicle the camera points at — a character drives in a featured scene, or that is central to
   the story — is a PICTURE CAR and belongs in 2500 – Props with unit_type = Rental-Day.
+- WIDE AND ESTABLISHING SHOTS: A vehicle does not need to appear in close-up to qualify as a
+  picture vehicle. If it performs a scripted action on camera — firing weapons, sailing, driving,
+  crashing, approaching — it requires a 2500 row regardless of shot size. Naval vessels firing
+  on camera in a wide establishing shot are picture vehicles. Military vehicles in a scripted
+  convoy approach are picture vehicles. The trigger is on-camera scripted action, not camera proximity.
 - Note for picture car rows: 'On-screen picture car. Requires insurance rider. Hero + stunt duplicate
   recommended for action sequences.'
 - If the vehicle is used in a stunt, chase, or crash: also add a Stunt Driver row in 2950.
@@ -238,6 +250,12 @@ NAMED BRANDS AND PRODUCT CLEARANCE (account 6200):
 - Signals that do NOT require clearance: fictional character names, fictional business names,
   fictional locations, fictional government bodies, fictional project names invented by the
   screenwriter.
+- ON-SCREEN TITLE GRAPHICS ARE NEVER 6200 ITEMS: Scripted on-screen text overlays —
+  SUPERIMPOSITION, SUPER, TITLE CARD, SUBTITLE, LOWER THIRD, CREDITS, opening credit sequences —
+  are post-production deliverables that belong in 5500 Titles. They require no legal clearance,
+  no rights payment, and have no legal component. Do NOT place title cards, superimpositions, or
+  credit sequences in 6200. 6200 is strictly for third-party IP: real trademarks, copyrighted
+  music, and real brand clearances.
 - MUSIC SYNC LICENSING: Any song or music track played on camera (even briefly) — on a radio,
   phone, speaker, TV, or performed live — requires a 6200 clearance flag if the track is a real
   copyrighted work. Description: 'Music sync licensing — [song/track description if known]',
@@ -305,6 +323,11 @@ PRACTICAL LIGHTING ON SET (account 2700):
   electrical cost must have its own 2700 row.
 - Description: 'Practical [light source] — [location/scenes]', unit_type = Rental-Day. Notes:
   'Requires electrical rigging and operator.'
+- ATMOSPHERIC SMOKE, FOG, AND HAZE ARE NOT 2700 ITEMS: Fog machines, haze generators, and
+  atmospheric smoke/mist rigs are Special Effects department equipment and belong in 3000
+  Mechanical FX. The Electric department powers these machines but does not generate the budget
+  line item. Do NOT generate 2700 rows for fog, haze, smoke, or mist effects. Generate a 3000
+  row instead, and note in the 3000 Notes that 2700 coordination is required for power supply.
 
 BREAKAWAY AND DESTRUCTIBLE ELEMENTS:
 - Any scene flag or script description containing 'breakaway', 'dentable', 'destructible', 'practical
@@ -435,6 +458,19 @@ ACCOUNT ROUTING — STUNTS & SAFETY (2950) vs. MECHANICAL FX (3000):
   3000 is for the effect itself; 2950 is for the safety and stunt labor around it.
   A scene with a stunt fall + explosion needs rows in BOTH 2950 (stunt performer, safety officer)
   AND 3000 (practical explosion rig, pyrotechnician).
+- BLOOD AND GORE PRACTICAL EFFECTS: The delivery mechanism for a practical blood, gore, or
+  tissue fragmentation rig (pneumatic blood pump, blood shower rig, squib system, splatter gag)
+  belongs in 3000 Mechanical FX — not 2500. If a specific named cast member requires hero blood
+  or gore application for a close-up (e.g., blood gel applied to an actor's wound), that hero
+  application goes in 2500 (as a prop) or 3400 (as makeup FX). The same physical event must
+  never appear as both a 2500 row AND a 3000 row — route the delivery mechanism to 3000 and
+  note the 2500/3400 coordination in the 3000 Notes field.
+- WATER SAFETY: Any scene with principal cast in or adjacent to open water, surf, pools, rivers,
+  lakes, or water tanks requires a dedicated 2950 Water Safety Officer row — SEPARATE from the
+  general Safety Officer row. Budget independently. Description: 'Water Safety Officer —
+  [scene/water type]', unit_type = Days. Notes: 'Required whenever cast are in or adjacent to
+  open water. Coordinate with Marine Coordinator for vessel and water safety plan. Distinct from
+  general Safety Officer.'
 
 SPECIALIST CAMERA EQUIPMENT (account 2600):
 - Account 2600 covers all specialist camera equipment and non-standard units beyond the core camera
@@ -529,9 +565,12 @@ SPECIALIST TECHNICAL ADVISORS (account 3200):
   dependency across the production to warrant a standalone budget line in 3200.
 
 ON-SCREEN TITLES AND GRAPHICS (account 5500):
-- Any explicit on-screen title direction in the screenplay — SUBTITLE:, SUPER:, TITLE CARD:,
-  LOWER THIRD:, or equivalent — must generate a 5500 Titles SCRIPT row. These are production
-  deliverables requiring design, director approval, and post delivery.
+- Any explicit on-screen title direction in the screenplay — SUBTITLE:, SUPER:, SUPERIMPOSITION:,
+  TITLE CARD:, LOWER THIRD:, CREDITS:, or equivalent — must generate a 5500 Titles SCRIPT row.
+  These are production deliverables requiring design, director approval, and post delivery.
+- NEVER route title cards, superimpositions, or credit sequences to 6200 Legal. They are not
+  clearance items — they are post-production graphics deliverables. 6200 is only for third-party
+  IP, music rights, and brand clearances.
 - Do NOT leave scripted on-screen graphics only in Scene Breakdown Notes. A Note that goes
   nowhere is not a breakdown. The 5500 row is the cost placeholder for the titles package.
 - Description: 'On-screen subtitle / title card graphics — [brief description of what appears
@@ -610,4 +649,12 @@ moonlight / sunlight / golden hour / overcast → NOT practical FX and NOT 3000 
 pre-production photography / fabrication session 3200 row with no 'custom photograph', 'photo double', or 'fabricated portrait' trigger → DO NOT GENERATE — not a default placeholder
 auto-generated 2500 cross-reference row → Description must be human-readable item name from triggering row — never expose internal 'Notes flagged...' trigger language in Description field
 named composition performed on camera → Legal (6200): clearance IS required — not 'may be required'; note public domain status of composition separately from master use rights for any recording
+SUPERIMPOSITION / SUPER / TITLE CARD / CREDITS direction → Titles (5500) — NEVER 6200; title cards are post-production deliverables with no clearance component
+auto-generated 2950 stunt driver / specialty operator row Notes → human-readable text only — never expose internal trigger phrases like 'auto-injected row' or 'Notes flagged stunt driver'
+costume piece (helmet, uniform, boots) used as prop action on camera → Wardrobe (3300) ONLY with active-handling note — never simultaneously in 2500 Props; 2500 + 3300 duplicate is always suppressed
+practical blood/gore/splatter delivery rig → Mechanical FX (3000) only; hero blood application to named cast member for close-up → Props (2500) or Makeup (3400); same event never in both 2500 and 3000
+named character with scripted individual action (death, stunt gag, scripted task) but no dialogue → Talent (1600): cast row required regardless of dialogue — test is scripted action, not lines spoken
+atmospheric fog machine / haze rig / smoke machine → Mechanical FX (3000) — NEVER 2700 Electric; Electric powers equipment but does not generate the line item; note 2700 coordination in 3000 Notes
+vehicle performing scripted action in wide/establishing shot (naval vessel firing, convoy approach) → Props (2500): picture vehicle row — wide shots qualify; trigger is on-camera scripted action, not shot size
+cast in open water / surf / river / pool / ocean tank → Stunts & Safety (2950): Water Safety Officer row required — separate from general Safety Officer, budget independently
 """

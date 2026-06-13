@@ -222,8 +222,9 @@ def _enforce_flow_through(data: dict) -> None:
                         "script_page": scene.get("script_page"),
                         "script_quote": "",
                         "notes": (
-                            f"Auto-generated: scene {scene.get('scene_number', '?')} flagged "
-                            f"'{entry}' in special_camera — no matching 2600 row found."
+                            f"Auto-generated: scene {scene.get('scene_number', '?')} requires "
+                            f"specialist camera equipment ({entry}) — no matching 2600 row found "
+                            f"in extraction. Verify equipment type and operator requirements with DP."
                         ),
                         "confidence": "Medium",
                     })
@@ -281,8 +282,9 @@ def _enforce_flow_through(data: dict) -> None:
                         "script_page": scene.get("script_page"),
                         "script_quote": "",
                         "notes": (
-                            f"Auto-generated: scene {scene.get('scene_number', '?')} flagged "
-                            f"'{fx}' in practical_fx — no matching 3000 row found."
+                            f"Auto-generated: scene {scene.get('scene_number', '?')} describes "
+                            f"a practical on-set effect ({fx}) — no matching 3000 row found in "
+                            f"extraction. Verify requirements with Special FX department."
                         ),
                         "confidence": "Medium",
                     })
@@ -349,8 +351,9 @@ def _enforce_flow_through(data: dict) -> None:
                     "script_page": prop_row.get("script_page"),
                     "script_quote": "",
                     "notes": (
-                        f"Auto-generated: 2500 Props row for '{veh_desc[:70]}' Notes "
-                        f"flagged 'stunt driver' — auto-injected 2950 row."
+                        f"Auto-generated from picture vehicle row — {veh_desc[:80]}. "
+                        f"Stunt operator/driver required for all on-camera vehicle movement. "
+                        f"Coordinate with Stunt Coordinator."
                     ),
                     "confidence": "Medium",
                 })
@@ -534,6 +537,52 @@ def _enforce_flow_through(data: dict) -> None:
             print(
                 "  [flow-through] Injected 3200 Welfare Worker / Studio Teacher row — "
                 "minor extras flagged in 3900 Background Notes."
+            )
+
+    # ── Water Safety → 2950 ──────────────────────────────────────────────────
+    # When principal cast are in surf, open water, rivers, pools, or tanks, a
+    # dedicated Water Safety Officer row is required — separate from general Safety Officer.
+    _WATER_SAFETY_TRIGGERS = frozenset({
+        "surf", "breaker", "ocean", "open water", "swim", "wade",
+        "underwater", "river", "lake", "tank", "at sea",
+    })
+    water_cast_scenes = []
+    for s in scenes:
+        if not s.get("cast"):
+            continue
+        combined = " ".join([
+            " ".join(s.get("practical_fx") or []),
+            " ".join(s.get("stunts") or []),
+            s.get("wardrobe_notes") or "",
+            s.get("heading") or "",
+        ]).lower()
+        if any(kw in combined for kw in _WATER_SAFETY_TRIGGERS):
+            water_cast_scenes.append(s)
+    if water_cast_scenes:
+        existing_2950_text = " ".join(
+            r.get("description", "").lower()
+            for r in accounts.get("2950", [])
+            if r.get("populated_by") == "SCRIPT"
+        )
+        if "water safety" not in existing_2950_text:
+            accounts.setdefault("2950", []).append({
+                "account_no": None,
+                "description": "Water Safety Officer — cast in open water, surf, or aquatic sequences",
+                "amount": 1,
+                "unit_type": "Days",
+                "populated_by": "SCRIPT",
+                "script_page": water_cast_scenes[0].get("script_page"),
+                "script_quote": "",
+                "notes": (
+                    "Required whenever principal cast are in or adjacent to open water, surf, "
+                    "pools, rivers, or tanks. Distinct from general Safety Officer — budget independently. "
+                    "Coordinate with Marine Coordinator for vessel and water safety plan."
+                ),
+                "confidence": "High",
+            })
+            print(
+                f"  [flow-through] Injected 2950 Water Safety Officer row — "
+                f"{len(water_cast_scenes)} scene(s) flagged cast in open water or surf."
             )
 
     # ── Suppress unsupported pre-production photography 3200 rows ────────────
@@ -835,10 +884,28 @@ def _deduplicate_accounts(data: dict) -> None:
                 clean_2400.append(row)
         accounts["2400"] = clean_2400
 
-    # Rule 2: 2500 vs 3300 — Wardrobe wins over Props
+    # Rule 2: 2500 vs 3300 — Wardrobe wins over Props (exact + fuzzy match)
+    # Catches costume pieces (helmets, uniforms, boots) that appear in both accounts.
     norms_3300 = script_norms("3300")
     if norms_3300:
-        suppress_from("2500", norms_3300, "also in 3300 — Wardrobe wins over Props")
+        rows_2500 = accounts.get("2500", [])
+        clean_2500 = []
+        for row in rows_2500:
+            if row.get("populated_by") != "SCRIPT":
+                clean_2500.append(row)
+                continue
+            n = _norm(row.get("description", ""))
+            if not n:
+                clean_2500.append(row)
+                continue
+            if n in norms_3300 or any(_token_jaccard(n, t) >= 0.4 for t in norms_3300 if t):
+                print(
+                    f"  [dedup] Suppressed 2500: "
+                    f"'{row.get('description', '?')[:70]}' — also in 3300 (Wardrobe wins over Props)"
+                )
+            else:
+                clean_2500.append(row)
+        accounts["2500"] = clean_2500
 
     # Rule 3: Notes-referenced account — suppress source when same item exists in target
     # Skip pairs already handled by Rules 1 & 2 to avoid double-processing.
@@ -863,6 +930,60 @@ def _deduplicate_accounts(data: dict) -> None:
                         f"also in {ref_acct} (Notes-referenced account wins)",
                     )
                     break  # one suppression per row is enough
+
+    # Rule 4: 2500 vs 3000 — Mechanical FX delivery mechanism wins over Props
+    # Blood/gore/splatter rig descriptions in both 2500 and 3000 are double-counts.
+    # The delivery mechanism (rig, pump, system) belongs in 3000; individual hero
+    # material application to a named cast member belongs in 2500/3400.
+    _FX_DELIVERY_KW = frozenset({
+        "blood", "gore", "flesh", "tissue", "splatter", "gag",
+        "blood and gore", "blood shower", "blood jet",
+    })
+    norms_3000 = script_norms("3000")
+    if norms_3000:
+        rows_2500_r4 = accounts.get("2500", [])
+        clean_2500_r4 = []
+        for row in rows_2500_r4:
+            if row.get("populated_by") != "SCRIPT":
+                clean_2500_r4.append(row)
+                continue
+            desc_lower = (row.get("description") or "").lower()
+            n = _norm(row.get("description", ""))
+            is_fx_delivery = any(kw in desc_lower for kw in _FX_DELIVERY_KW)
+            if is_fx_delivery and n and any(_token_jaccard(n, t) >= 0.35 for t in norms_3000 if t):
+                print(
+                    f"  [dedup] Suppressed 2500: "
+                    f"'{row.get('description', '?')[:70]}' — "
+                    f"practical FX delivery mechanism already in 3000 (Mechanical FX wins)"
+                )
+            else:
+                clean_2500_r4.append(row)
+        accounts["2500"] = clean_2500_r4
+
+    # Rule 5: 2700 vs 3000 — Mechanical FX wins for atmospheric fog/smoke/haze
+    # Fog machines, haze rigs, and smoke effects placed in 2700 Electric are
+    # misrouted — the FX department owns these, not Electric. Suppress 2700 rows
+    # describing atmospheric effects when a matching 3000 row already exists.
+    _ATMO_FX_KW = frozenset({"fog", "haze", "smoke", "mist", "atmospheric"})
+    norms_3000_r5 = script_norms("3000")  # re-evaluate after Rule 4 may have changed 2500
+    rows_2700 = accounts.get("2700", [])
+    clean_2700 = []
+    for row in rows_2700:
+        if row.get("populated_by") != "SCRIPT":
+            clean_2700.append(row)
+            continue
+        desc_lower = (row.get("description") or "").lower()
+        n = _norm(row.get("description", ""))
+        is_atmo = any(kw in desc_lower for kw in _ATMO_FX_KW)
+        if is_atmo and norms_3000_r5 and any(_token_jaccard(n, t) >= 0.3 for t in norms_3000_r5 if t):
+            print(
+                f"  [dedup] Suppressed 2700: "
+                f"'{row.get('description', '?')[:70]}' — "
+                f"atmospheric FX already in 3000 (Mechanical FX wins; note 2700 power coordination in 3000)"
+            )
+        else:
+            clean_2700.append(row)
+    accounts["2700"] = clean_2700
 
 
 def _default_output(input_path: str) -> str:
