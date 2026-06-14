@@ -209,7 +209,7 @@
               <div id="progressState" class="panel-state" style="display:none;">
                 <div class="spinner"></div>
                 <p class="progress-step" id="progressStep">Starting…</p>
-                <p class="progress-note">Processing your screenplay — this may take up to 4 minutes depending on script complexity.</p>
+                <p class="progress-note">Processing your screenplay — this may take up to 5 minutes depending on script complexity.</p>
               </div>
 
               <!-- State: success -->
@@ -566,7 +566,7 @@
         timeoutTimer = setTimeout(() => {
           clearInterval(pollTimer);
           showError('Processing timed out. The file may be too large or the server may be busy. Please try again.');
-        }, 300000);
+        }, 420000);
       });
 
       // ── Status polling ────────────────────────────────────────
