@@ -10,7 +10,7 @@ from prompts import SYSTEM_PROMPT, account_group_user_message
 MODEL = "claude-sonnet-4-6"
 MAX_TOKENS_PER_CALL = 8000
 # Delay between grouped calls to stay within the 30,000 tokens/minute rate limit.
-INTER_CALL_DELAY_SECONDS = 5
+INTER_CALL_DELAY_SECONDS = 2
 
 # Each tuple: (account_numbers_to_extract, include_scene_breakdown)
 # Call 1 also requests the scene breakdown. Remaining calls are account-only.
