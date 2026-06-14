@@ -30,6 +30,7 @@
   <!-- Top bar -->
   <header class="topbar">
     <div class="topbar-left">
+      <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle navigation">&#9776;</button>
       <span class="topbar-logo-mark">CB</span>
       <span class="topbar-title">Cinebudget</span>
     </div>
@@ -38,6 +39,8 @@
       <a href="{{ url_for('logout') }}" class="topbar-logout">Sign out</a>
     </div>
   </header>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
   <div class="dashboard-layout">
 
@@ -734,6 +737,36 @@
         document.getElementById('dealsFormState').style.display = 'block';
       });
     }
+    // ── Mobile sidebar toggle ──────────────────────────────────────
+    const hamburgerBtn    = document.getElementById('hamburgerBtn');
+    const sidebarEl       = document.querySelector('.sidebar');
+    const sidebarOverlay  = document.getElementById('sidebarOverlay');
+
+    function openSidebar() {
+      sidebarEl.classList.add('sidebar--open');
+      sidebarOverlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+      sidebarEl.classList.remove('sidebar--open');
+      sidebarOverlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    hamburgerBtn.addEventListener('click', () => {
+      sidebarEl.classList.contains('sidebar--open') ? closeSidebar() : openSidebar();
+    });
+
+    sidebarOverlay.addEventListener('click', closeSidebar);
+
+    sidebarEl.querySelectorAll('.sidebar-link').forEach(link => {
+      link.addEventListener('click', closeSidebar);
+    });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 768) closeSidebar();
+    });
   </script>
 
 </body>
