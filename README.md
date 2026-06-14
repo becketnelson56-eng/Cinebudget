@@ -23,10 +23,12 @@ Upload a screenplay PDF. Cinebudget reads it the way an experienced 1st Assistan
 
 ---
 
-## Why It Exists
-
-## Screenshot
+## Screenshots of UI and Outputs
 ![Cinebudget Dashboard](screenshot.png)
+![Script Breakdown Tab](screenshot2.png)
+![Excel Output](screenshot3.png)
+
+## Why It Exists
 
 The standard workflow requires a 1st AD to manually read a script and create a breakdown sheet over 1-5 days, then hand it to a Line Producer who builds the budget. Cinebudget compresses the breakdown step from days to minutes, outputting data directly into a budget-ready format — eliminating the redundant transfer step between documents.
 
