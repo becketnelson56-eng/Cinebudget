@@ -1,9 +1,10 @@
-import base64
+import io
 import json
 import os
 import time
 
 import anthropic
+import pdfplumber
 
 from prompts import CORE_RULES, CALL_PROMPTS, account_group_user_message
 
@@ -45,7 +46,7 @@ def get_breakdown(pdf_bytes: bytes) -> dict:
         anthropic.APIError: on unrecoverable API failures
     """
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-    pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
+    script_text = _extract_text(pdf_bytes)
 
     result: dict = {"scene_breakdown": [], "accounts": {}}
     total = len(ACCOUNT_GROUPS)
@@ -61,7 +62,7 @@ def get_breakdown(pdf_bytes: bytes) -> dict:
         call_system_prompt = CORE_RULES + CALL_PROMPTS[i - 1]
 
         try:
-            group = _get_group_items(client, pdf_b64, accounts, include_scenes, call_system_prompt)
+            group = _get_group_items(client, script_text, accounts, include_scenes, call_system_prompt)
 
             if include_scenes:
                 result["scene_breakdown"] = group.get("scene_breakdown", [])
@@ -85,9 +86,15 @@ def get_breakdown(pdf_bytes: bytes) -> dict:
     return result
 
 
+def _extract_text(pdf_bytes: bytes) -> str:
+    with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+        pages = [page.extract_text() for page in pdf.pages]
+    return "\n\n".join(p for p in pages if p)
+
+
 def _get_group_items(
     client: anthropic.Anthropic,
-    pdf_b64: str,
+    script_text: str,
     accounts: list[str],
     include_scenes: bool,
     system_prompt: str,
@@ -102,29 +109,12 @@ def _get_group_items(
         ValueError: if the response is valid JSON but missing required keys or
                     contains accounts outside the requested set
     """
+    user_text = f"SCREENPLAY TEXT:\n\n{script_text}\n\n{account_group_user_message(accounts, include_scenes)}"
     message = client.messages.create(
         model=MODEL,
         max_tokens=MAX_TOKENS_PER_CALL,
         system=system_prompt,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "application/pdf",
-                            "data": pdf_b64,
-                        },
-                    },
-                    {
-                        "type": "text",
-                        "text": account_group_user_message(accounts, include_scenes),
-                    },
-                ],
-            }
-        ],
+        messages=[{"role": "user", "content": user_text}],
     )
 
     raw_text = message.content[0].text.strip()
