@@ -8,10 +8,15 @@ import pdfplumber
 
 from prompts import CORE_RULES, CALL_PROMPTS, account_group_user_message
 
-MODEL = "claude-sonnet-4-6"
+SONNET = "claude-sonnet-4-6"
+HAIKU = "claude-haiku-4-5-20251001"
 MAX_TOKENS_PER_CALL = 8000
 # Delay between grouped calls to stay within the 30,000 tokens/minute rate limit.
 INTER_CALL_DELAY_SECONDS = 2
+
+# calls 1,2,4 → Sonnet (cast/art dept/set ops require highest accuracy)
+# calls 3,5  → Haiku  (camera/FX/legal are lower-complexity extractions)
+CALL_MODELS = [SONNET, SONNET, HAIKU, SONNET, HAIKU]
 
 # Each tuple: (account_numbers_to_extract, include_scene_breakdown)
 # Call 1 also requests the scene breakdown. Remaining calls are account-only.
@@ -60,7 +65,7 @@ def get_breakdown(pdf_bytes: bytes) -> dict:
         print(f"  [Call {i}/{total}] {acct_label}{scenes_label}...", end=" ", flush=True)
 
         try:
-            group = _get_group_items(client, script_text, accounts, include_scenes, CALL_PROMPTS[i - 1])
+            group = _get_group_items(client, script_text, accounts, include_scenes, CALL_PROMPTS[i - 1], CALL_MODELS[i - 1])
 
             if include_scenes:
                 result["scene_breakdown"] = group.get("scene_breakdown", [])
@@ -96,6 +101,7 @@ def _get_group_items(
     accounts: list[str],
     include_scenes: bool,
     call_prompt: str,
+    model: str,
 ) -> dict:
     """
     Extract data for a group of accounts in a single API call.
@@ -113,7 +119,7 @@ def _get_group_items(
     ]
     user_text = f"SCREENPLAY TEXT:\n\n{script_text}\n\n{account_group_user_message(accounts, include_scenes)}"
     message = client.messages.create(
-        model=MODEL,
+        model=model,
         max_tokens=MAX_TOKENS_PER_CALL,
         system=system_blocks,
         messages=[{"role": "user", "content": user_text}],
