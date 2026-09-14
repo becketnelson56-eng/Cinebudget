@@ -5,7 +5,7 @@ import time
 
 import anthropic
 
-from prompts import SYSTEM_PROMPT, account_group_user_message
+from prompts import CORE_RULES, CALL_PROMPTS, account_group_user_message
 
 MODEL = "claude-sonnet-4-6"
 MAX_TOKENS_PER_CALL = 8000
@@ -58,8 +58,10 @@ def get_breakdown(pdf_bytes: bytes) -> dict:
         acct_label = ", ".join(accounts)
         print(f"  [Call {i}/{total}] {acct_label}{scenes_label}...", end=" ", flush=True)
 
+        call_system_prompt = CORE_RULES + CALL_PROMPTS[i - 1]
+
         try:
-            group = _get_group_items(client, pdf_b64, accounts, include_scenes)
+            group = _get_group_items(client, pdf_b64, accounts, include_scenes, call_system_prompt)
 
             if include_scenes:
                 result["scene_breakdown"] = group.get("scene_breakdown", [])
@@ -88,6 +90,7 @@ def _get_group_items(
     pdf_b64: str,
     accounts: list[str],
     include_scenes: bool,
+    system_prompt: str,
 ) -> dict:
     """
     Extract data for a group of accounts in a single API call.
@@ -102,7 +105,7 @@ def _get_group_items(
     message = client.messages.create(
         model=MODEL,
         max_tokens=MAX_TOKENS_PER_CALL,
-        system=SYSTEM_PROMPT,
+        system=system_prompt,
         messages=[
             {
                 "role": "user",
