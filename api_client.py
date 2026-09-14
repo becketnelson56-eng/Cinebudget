@@ -1,7 +1,7 @@
+import asyncio
 import io
 import json
 import os
-import time
 
 import anthropic
 import pdfplumber
@@ -11,8 +11,8 @@ from prompts import CORE_RULES, CALL_PROMPTS, account_group_user_message
 SONNET = "claude-sonnet-4-6"
 HAIKU = "claude-haiku-4-5-20251001"
 MAX_TOKENS_PER_CALL = 8000
-# Delay between grouped calls to stay within the 30,000 tokens/minute rate limit.
-INTER_CALL_DELAY_SECONDS = 2
+MAX_RETRIES = 4
+BASE_BACKOFF_SECONDS = 2.0
 
 # calls 1,2,4 → Sonnet (cast/art dept/set ops require highest accuracy)
 # calls 3,5  → Haiku  (camera/FX/legal are lower-complexity extractions)
@@ -29,13 +29,13 @@ ACCOUNT_GROUPS: list[tuple[list[str], bool]] = [
 ]
 
 
-def get_breakdown(pdf_bytes: bytes) -> dict:
+async def get_breakdown(pdf_bytes: bytes) -> dict:
     """
     Extract all production data from a script PDF.
 
-    Makes 4 API calls across logical account groups, with a 5-second delay
-    between calls to respect the rate limit. The first call also extracts the
-    Scene Breakdown (one row per scene).
+    Fires all 5 API calls in parallel via asyncio.gather. Exponential backoff
+    on 429 rate-limit errors. JSON/value parse errors on individual calls are
+    skipped with a warning; API errors propagate and fail the job.
 
     Returns:
         {
@@ -50,41 +50,36 @@ def get_breakdown(pdf_bytes: bytes) -> dict:
     Raises:
         anthropic.APIError: on unrecoverable API failures
     """
-    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+    client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
     script_text = _extract_text(pdf_bytes)
-
-    result: dict = {"scene_breakdown": [], "accounts": {}}
     total = len(ACCOUNT_GROUPS)
 
-    for i, (accounts, include_scenes) in enumerate(ACCOUNT_GROUPS, start=1):
-        if i > 1:
-            time.sleep(INTER_CALL_DELAY_SECONDS)
+    tasks = [
+        _get_group_items(
+            client, script_text,
+            accounts, include_scenes,
+            CALL_PROMPTS[i], CALL_MODELS[i],
+            call_num=i + 1, total=total,
+        )
+        for i, (accounts, include_scenes) in enumerate(ACCOUNT_GROUPS)
+    ]
 
-        scenes_label = " + scenes" if include_scenes else ""
-        acct_label = ", ".join(accounts)
-        print(f"  [Call {i}/{total}] {acct_label}{scenes_label}...", end=" ", flush=True)
+    # return_exceptions=True: one call failing doesn't cancel the rest
+    raw_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        try:
-            group = _get_group_items(client, script_text, accounts, include_scenes, CALL_PROMPTS[i - 1], CALL_MODELS[i - 1])
-
-            if include_scenes:
-                result["scene_breakdown"] = group.get("scene_breakdown", [])
-
-            for acct, items in group.get("accounts", {}).items():
-                result["accounts"][acct] = items
-
-            item_count = sum(len(v) for v in group.get("accounts", {}).values())
-            if include_scenes:
-                scene_count = len(group.get("scene_breakdown", []))
-                print(f"{scene_count} scene(s), {item_count} item(s)")
-            else:
-                print(f"{item_count} item(s)")
-
-        except (json.JSONDecodeError, ValueError) as e:
-            print(f"WARNING (skipped): {e}")
-        except anthropic.APIError as e:
-            print(f"ERROR: {e}")
-            raise
+    result: dict = {"scene_breakdown": [], "accounts": {}}
+    for group, (accounts, include_scenes) in zip(raw_results, ACCOUNT_GROUPS):
+        if isinstance(group, anthropic.APIError):
+            raise group
+        if isinstance(group, (json.JSONDecodeError, ValueError)):
+            print(f"WARNING (skipped): {group}")
+            continue
+        if isinstance(group, Exception):
+            raise group
+        if include_scenes:
+            result["scene_breakdown"] = group.get("scene_breakdown", [])
+        for acct, items in group.get("accounts", {}).items():
+            result["accounts"][acct] = items
 
     return result
 
@@ -95,16 +90,20 @@ def _extract_text(pdf_bytes: bytes) -> str:
     return "\n\n".join(p for p in pages if p)
 
 
-def _get_group_items(
-    client: anthropic.Anthropic,
+async def _get_group_items(
+    client: anthropic.AsyncAnthropic,
     script_text: str,
     accounts: list[str],
     include_scenes: bool,
     call_prompt: str,
     model: str,
+    call_num: int,
+    total: int,
 ) -> dict:
     """
-    Extract data for a group of accounts in a single API call.
+    Extract data for a group of accounts in a single async API call.
+
+    Retries up to MAX_RETRIES times on 429 with exponential backoff.
 
     Returns dict with 'accounts' (always) and 'scene_breakdown' (when include_scenes).
 
@@ -112,27 +111,44 @@ def _get_group_items(
         json.JSONDecodeError: if the response is not valid JSON
         ValueError: if the response is valid JSON but missing required keys or
                     contains accounts outside the requested set
+        anthropic.APIError: on unrecoverable API failures
     """
+    scenes_label = " + scenes" if include_scenes else ""
+    acct_label = ", ".join(accounts)
+    print(f"  [Call {call_num}/{total}] {acct_label}{scenes_label}...", end=" ", flush=True)
+
     system_blocks = [
         {"type": "text", "text": CORE_RULES, "cache_control": {"type": "ephemeral"}},
         {"type": "text", "text": call_prompt},
     ]
     user_text = f"SCREENPLAY TEXT:\n\n{script_text}\n\n{account_group_user_message(accounts, include_scenes)}"
-    message = client.messages.create(
-        model=model,
-        max_tokens=MAX_TOKENS_PER_CALL,
-        system=system_blocks,
-        messages=[{"role": "user", "content": user_text}],
-    )
+
+    message = None
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            message = await client.messages.create(
+                model=model,
+                max_tokens=MAX_TOKENS_PER_CALL,
+                system=system_blocks,
+                messages=[{"role": "user", "content": user_text}],
+            )
+            break
+        except anthropic.RateLimitError:
+            if attempt >= MAX_RETRIES:
+                raise
+            wait = BASE_BACKOFF_SECONDS * (2 ** attempt)
+            print(
+                f"\n  [Call {call_num}] Rate limited — retrying in {wait:.0f}s "
+                f"(attempt {attempt + 1}/{MAX_RETRIES})",
+                flush=True,
+            )
+            await asyncio.sleep(wait)
 
     raw_text = message.content[0].text.strip()
 
     # Strip accidental markdown fences if Claude added them despite instructions
     if raw_text.startswith("```"):
-        inner = [
-            line for line in raw_text.splitlines()
-            if not line.startswith("```")
-        ]
+        inner = [line for line in raw_text.splitlines() if not line.startswith("```")]
         raw_text = "\n".join(inner).strip()
 
     parsed = json.loads(raw_text)
@@ -166,8 +182,14 @@ def _get_group_items(
         else:
             clean_accounts[acct] = items
 
+    item_count = sum(len(v) for v in clean_accounts.values())
+    if include_scenes:
+        scene_count = len(parsed.get("scene_breakdown", []))
+        print(f"{scene_count} scene(s), {item_count} item(s)")
+    else:
+        print(f"{item_count} item(s)")
+
     result: dict = {"accounts": clean_accounts}
     if include_scenes:
         result["scene_breakdown"] = parsed.get("scene_breakdown", [])
-
     return result

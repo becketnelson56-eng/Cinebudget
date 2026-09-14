@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import asyncio
 import json
 import os
 import pathlib
@@ -1044,7 +1045,7 @@ def main() -> None:
     # Call Claude API
     print("Sending to Claude API for breakdown extraction...")
     try:
-        data = get_breakdown(pdf_bytes)
+        data = asyncio.run(get_breakdown(pdf_bytes))
     except json.JSONDecodeError as e:
         print(f"ERROR: Claude returned invalid JSON: {e}", file=sys.stderr)
         sys.exit(1)

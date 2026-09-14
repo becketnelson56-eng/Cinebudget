@@ -1,3 +1,4 @@
+import asyncio
 import os
 import pathlib
 import shutil
@@ -67,7 +68,7 @@ def _run_pipeline(job_id: str, pdf_path: str, pdf_bytes: bytes, tmp_dir: str) ->
     # Step 1 — API extraction (the slow part, ~1–2 min)
     try:
         set_step("Sending screenplay to Claude API…")
-        data = get_breakdown(pdf_bytes)
+        data = asyncio.run(get_breakdown(pdf_bytes))
     except anthropic.AuthenticationError:
         return fail("API authentication failed — check that ANTHROPIC_API_KEY is set correctly.")
     except anthropic.RateLimitError:
