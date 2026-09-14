@@ -59,10 +59,8 @@ def get_breakdown(pdf_bytes: bytes) -> dict:
         acct_label = ", ".join(accounts)
         print(f"  [Call {i}/{total}] {acct_label}{scenes_label}...", end=" ", flush=True)
 
-        call_system_prompt = CORE_RULES + CALL_PROMPTS[i - 1]
-
         try:
-            group = _get_group_items(client, script_text, accounts, include_scenes, call_system_prompt)
+            group = _get_group_items(client, script_text, accounts, include_scenes, CALL_PROMPTS[i - 1])
 
             if include_scenes:
                 result["scene_breakdown"] = group.get("scene_breakdown", [])
@@ -97,7 +95,7 @@ def _get_group_items(
     script_text: str,
     accounts: list[str],
     include_scenes: bool,
-    system_prompt: str,
+    call_prompt: str,
 ) -> dict:
     """
     Extract data for a group of accounts in a single API call.
@@ -109,11 +107,15 @@ def _get_group_items(
         ValueError: if the response is valid JSON but missing required keys or
                     contains accounts outside the requested set
     """
+    system_blocks = [
+        {"type": "text", "text": CORE_RULES, "cache_control": {"type": "ephemeral"}},
+        {"type": "text", "text": call_prompt},
+    ]
     user_text = f"SCREENPLAY TEXT:\n\n{script_text}\n\n{account_group_user_message(accounts, include_scenes)}"
     message = client.messages.create(
         model=MODEL,
         max_tokens=MAX_TOKENS_PER_CALL,
-        system=system_prompt,
+        system=system_blocks,
         messages=[{"role": "user", "content": user_text}],
     )
 
