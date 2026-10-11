@@ -118,6 +118,18 @@ ACCOUNT ROUTING — PROPS vs SET DECORATION (MUTUAL EXCLUSION):
 - Same item in both 2400 and 2500 = always a duplicate error. Decide and commit — no conditional hedge notes ("should also have a 2500 row", "if cast handles it, move to 2500"). Hedge notes are routing errors caught in post-processing.
 - Breakaway set pieces cast crash through → 2500, not 2400.
 
+COSTUME VS PROP (3300 ALWAYS WINS OVER 2500):
+- Any clothing or uniform worn by a performer on camera → 3300 Wardrobe ONLY. Never 2500 under any crossover rationale.
+- This applies regardless of whether the performer handles the item actively: a jacket removed and thrown, a hat handed off, boots put on camera — all 3300, never 2500.
+- Never use the phrase "costume/prop crossover" in 2500 Notes. Route the item and commit.
+
+PERIOD PRODUCTION DESIGN (account 2200):
+- Any scene set more than 10 years before present (i.e. pre-2015) OR in an explicitly named historical era → one 2200 SCRIPT row per distinct historical period.
+- Description format: "Period [YEAR or ERA] production design — [list of affected sets]"
+- This is NOT the Art Director or Production Designer DEAL row — it represents the physical construction/dressing work budget for period authenticity.
+- One 2200 SCRIPT row per distinct historical period. If the script has both a 1971 flashback and a 1940s flashback, those are two separate rows.
+- Notes: list each affected set location, confirm construction vs dressing-only approach with Production Designer.
+
 HERO PROPS (account 2500):
 - Never prefix "Hero prop —" in description. Note hero status in Notes only.
 - Qualifies as hero when: dedicated close-up, central to scene conflict, or requires multiples for safety/continuity.
@@ -150,7 +162,8 @@ SOUND CUES IMPLYING PRACTICAL EFFECTS:
 - Scripted sound cue implying a physical on-set event (glass breaking, explosion, crash) → Low-confidence 2500 row. A scene note alone is insufficient.
 
 SCRIPT LANGUAGE LOOKUP (Call 2):
-period/decade setting → 2200 period set + 3300 period costumes
+period/decade setting → 2200 period production design SCRIPT row (per distinct era) + 3300 period costumes
+clothing/uniform worn by performer → 3300 ONLY (never 2500, never "costume/prop crossover" hedge)
 police/ambulance/fire truck on camera → 2500 picture car (NOT 3600)
 breakaway structural element (wall, ceiling) → 2300, qty ≥ 3
 breakaway prop or furniture → 2500, qty ≥ 3
@@ -190,6 +203,7 @@ STUNTS AND SAFETY (account 2950) vs MECHANICAL FX (account 3000):
 - WATER SAFETY: Cast in or adjacent to open water, surf, pool, river, lake, or water tank → 2950 Water Safety Officer row, separate from the general Safety Officer.
 - Non-empty stunts array → 2950: Stunt Coordinator (Days) + Safety Officer (Days). Add Stunt Performer row if physical double required.
 - BLOOD/GORE FX: delivery mechanism (pneumatic blood pump, squib system, splatter rig) → 3000. Hero blood applied to named cast for close-up → 2500 or 3400. Same physical event never in both 2500 and 3000.
+- STUNT CONSOLIDATION RULE: Regardless of the number of stunt scenes, generate exactly ONE Stunt Coordinator row and ONE Safety Officer row covering the entire production. Do not create separate rows per scene. Description format: "Stunt Coordinator -- [gag1, gag2, gag3] -- Scenes [N & M]" and "Safety Officer -- all stunt action -- Scenes [N & M]". Notes for Coordinator: plain-English list of each gag + scene, then "Confirm performer-vs-stunt-double requirement for each gag." Notes for Safety Officer: "Scenes [N] and [M] are primary stunt days; confirm shoot schedule with AD."
 
 WEATHER AND ENVIRONMENTAL FX (account 3000):
 - Rain rig, snow rig, fog machine, smoke machine, wind machine → 3000 row per effect type.
@@ -234,8 +248,8 @@ auto-generated 2950/2600 row Notes → human-readable text only (never expose in
 # ── CALL 4 — Set Ops / Wardrobe / Makeup / Locations / Transport / Extras (3200-3900) ──
 PROMPT_CALL_4 = """
 SET OPERATIONS (account 3200):
-- Any child actor → 3200 Welfare Worker / Studio Teacher row.
-- Minor or child extras → 3200 Welfare Worker + 3900 background. Both required.
+- WELFARE WORKER (CONFIRMED MINORS ONLY): Generate a 3200 Welfare Worker / Studio Teacher row ONLY when a character is explicitly and unambiguously identified as a minor under 18. Qualifying indicators: age stated in years (e.g. "a 12-year-old girl"), description as "a child", "a boy", "a girl", "a teenager", "a toddler", "a baby", or character listed as CHILD / KID in the cast. NOT qualifying: adult characters described as "young" or "younger version of X", characters with child-sounding names but no age stated, school settings without any character explicitly identified as a minor. Never generate as a precautionary default.
+- Minor or confirmed child extras → 3200 Welfare Worker + 3900 background. Both required.
 - Welfare workers, guardians, studio teachers, tutors → 3200 ONLY. Never 1600.
 - 3+ rows across different accounts referencing the same advisor type (military, medical, legal, firearms) → dedicated 3200 advisor row.
 - Custom prop/artwork requiring a pre-production shoot with cast or doubles → 3200 row (Allow). Do NOT generate as a default — only when the script triggers a specific fabrication requirement.
@@ -250,6 +264,20 @@ CONTINUITY MAKEUP (account 3400):
 - Sweat/drenched/soaked/perspiration → 3400 row.
 - Scripted wounds, blood, cuts, bruises, or injury makeup → 3400 row.
 - Tears and sweat in the same scene = separate rows.
+
+PERIOD AND SPECIALTY HAIR (account 3400):
+- Any scripted hairstyle requiring period-specific or specialty technique → SEPARATE 3400 SCRIPT row, in addition to any 3300 Wardrobe rows.
+- Trigger keywords: permed, poofy, updo, wig, hairpiece, period [era] hair, braided, teased, tonged, finger wave, Gibson girl, chignon, French twist, afro, silver hair, bleached, dyed, colored hair.
+- Description format: "Period [YEAR] [style] hair — [Character] (Scenes [N & M])"
+- Notes: flag wig/hairpiece vs. authentic period technique, which scenes are covered. Always separate from 3300 Wardrobe — both rows required when period wardrobe AND period hair apply.
+
+AGING MAKEUP (account 3400):
+- Each distinct aging level applied to a character requires its own 3400 SCRIPT row.
+- Unit = (character name) × (aging level). One unique pair per row.
+- Aging levels: Young/childhood (under 20), Mid-age (35–55), Older (55–70), Elderly (70+), or transitional (significant jump within a scene or across scenes).
+- Description format: "[Age level] makeup — [Character] ([scene context]) — Scene [N]"
+- Notes: describe the distinct aging approach, flag performer casting question (is performer age-appropriate for this level?), list scenes covered.
+- A character appearing at multiple ages throughout the script = multiple 3400 rows (one per age level).
 
 LOCATION ROWS (account 3500):
 - Every distinct slug line location → one 3500 row, regardless of scene brevity. Montage, single-shot pickups, and brief scenes all require 3500.
@@ -268,21 +296,35 @@ EXTRAS AND BACKGROUND (account 3900):
 ON-SCREEN TITLES (account 5500):
 - SUBTITLE, SUPER, SUPERIMPOSITION, TITLE CARD, LOWER THIRD, CREDITS direction in screenplay → 5500 row. Never 6200. One row covers multiple instances unless treatment is significantly different.
 
+SCRIPTED SOURCE AND LIVE MUSIC (account 5400):
+- Any scripted source music or live music performance described in the script → 5400 SCRIPT row. This is a production budget planning item — separate from the Music Supervisor DEAL row.
+- Triggers: music plays in action lines, character sings or plays an instrument, named song or artist, specific musical genre or era described, jukebox/radio/speakers described as playing.
+- Named copyrighted music: Notes must include "sync license and master rights clearance IS required" in BOTH the 5400 row AND a 6200 sync row.
+- Description format: "Live/source music — [brief context] (Scene [N]) — rights and playback decision pending"
+- Notes must enumerate all three decision paths: (1) live musicians on set — budget per session; (2) pre-cleared sync + master license for identified track; (3) original composition by score composer.
+- DO NOT suppress the 5400 SCRIPT row because a music supervisor DEAL row exists. They serve different purposes.
+- DO NOT generate for atmospheric post-production score or V.O. narration. Only explicitly scripted on-set source music.
+
 SCRIPT LANGUAGE LOOKUP (Call 4):
 crowd/busy street/people present → 3900 background extras
 animal/horse/dog → 3900 rental + 3200 handler (NOT 2500)
 prosthetics/aging/wounds/blood/bruises/injury makeup → 3400 special makeup FX
 weeping/tears/crying on camera → 3400 continuity makeup
 sweating/drenched/soaked on camera → 3400 sweat effect row
+permed/poofy/updo/wig/hairpiece/period hair/braided/finger wave → 3400 period hair row (separate from 3300)
+character at multiple ages across script → one 3400 row per distinct aging level (e.g. Elderly + Young = two rows)
 EXT public space → 3500 location permit + fees
 INT. practical location (apartment, office, restaurant, bar, hospital, school) → 3500 facility rental
 montage/brief location → 3500 row required (brevity does not exempt)
 custom prop photo/artwork requiring fabrication shoot → 3200 pre-production session
 3+ rows in different accounts referencing same specialist advisor type → 3200 technical advisor row
-minor/child extras → 3200 Welfare Worker + 3900 background (both required)
-welfare worker/guardian/studio teacher (child cast) → 3200 ONLY (NEVER 1600)
+confirmed minor/child extras (explicit age or child-cast language only) → 3200 Welfare Worker + 3900 background (both required)
+welfare worker/guardian/studio teacher (confirmed child cast) → 3200 ONLY (NEVER 1600)
+"young [adult character]" flashback without explicit age stated → NOT a minor; do NOT generate welfare worker
 pre-production fabrication 3200 row → only if script triggers custom prop photo/artwork; not a default
 SUPER/TITLE CARD/SUPERIMPOSITION/CREDITS → 5500 Titles (NEVER 6200)
+scripted on-set source music (radio, jukebox, character singing, live band) → 5400 SCRIPT row + 6200 sync if copyrighted
+music supervisor DEAL row exists → still generate 5400 SCRIPT row (different purpose)
 """
 
 # ── CALL 5 — Legal Clearance (6200) ──────────────────────────────────────────

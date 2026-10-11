@@ -47,26 +47,39 @@ def _enforce_flow_through(data: dict) -> None:
         script_2950 = [r for r in accounts.get("2950", []) if r.get("populated_by") == "SCRIPT"]
         if not script_2950:
             acct = accounts.setdefault("2950", [])
+            all_gags = []
+            scene_nums = []
             for scene in stunt_scenes:
                 scene_num = scene.get("scene_number", "?")
-                page = scene.get("script_page")
-                stunt_str = "; ".join(scene.get("stunts", [])[:3])
-                note = (
-                    f"Auto-generated fallback: scene {scene_num} flagged stunt action(s) "
-                    f"({stunt_str}) but extraction produced no 2950 SCRIPT rows."
-                )
-                for desc in ("Stunt Coordinator", "Safety Officer"):
-                    acct.append({
-                        "account_no": None,
-                        "description": f"{desc} — stunt action flagged in scene breakdown",
-                        "amount": 1,
-                        "unit_type": "Days",
-                        "populated_by": "SCRIPT",
-                        "script_page": page,
-                        "script_quote": "",
-                        "notes": note,
-                        "confidence": "Medium",
-                    })
+                scene_nums.append(str(scene_num))
+                all_gags.extend(scene.get("stunts", [])[:3])
+            gag_str = "; ".join(all_gags[:6]) or "stunt action"
+            scenes_str = " & ".join(scene_nums[:4])
+            first_page = stunt_scenes[0].get("script_page")
+            coordinator_notes = (
+                f"Stunt Coordinator covering all stunt action in production: "
+                f"{gag_str} (Scene {scenes_str}). "
+                f"Confirm performer-vs-stunt-double requirement for each gag."
+            )
+            safety_notes = (
+                f"Set Safety Officer required on all shoot days with stunt action. "
+                f"Scene {scenes_str} is primary stunt day; confirm shoot schedule with AD."
+            )
+            for desc, notes_text in (
+                ("Stunt Coordinator", coordinator_notes),
+                ("Safety Officer", safety_notes),
+            ):
+                acct.append({
+                    "account_no": None,
+                    "description": f"{desc} — stunt action flagged in scene breakdown",
+                    "amount": 1,
+                    "unit_type": "Days",
+                    "populated_by": "SCRIPT",
+                    "script_page": first_page,
+                    "script_quote": "",
+                    "notes": notes_text,
+                    "confidence": "Medium",
+                })
             print(
                 f"  [flow-through] Injected 2950 fallback rows for "
                 f"{len(stunt_scenes)} stunt scene(s) — extraction produced none."
@@ -128,8 +141,10 @@ def _enforce_flow_through(data: dict) -> None:
                     "script_page": scene.get("script_page"),
                     "script_quote": "",
                     "notes": (
-                        f"Auto-generated fallback: scene {scene.get('scene_number', '?')} is "
-                        f"NIGHT but extraction produced no 2700 SCRIPT rows."
+                        f"Night lighting package upcharge required for {location} "
+                        f"(Scene {scene.get('scene_number', '?')}, NIGHT). "
+                        f"Confirm with Gaffer on generator requirements and "
+                        f"additional electrical crew days for night shoot."
                     ),
                     "confidence": "High",
                 })
@@ -499,16 +514,65 @@ def _enforce_flow_through(data: dict) -> None:
                 f"flagged in {len(armorer_props)} 2500 Props Notes field(s)."
             )
 
-    # ── Welfare Worker (minor extras) → 3200 ─────────────────────────────────
-    # When any 3900 Background row Notes flag minors/children, verify a 3200
-    # welfare worker row exists. Required when minors are on set.
-    _MINOR_TRIGGERS = ("minor", "child extras", "welfare worker", "children required")
+    # ── Welfare Worker (confirmed minor cast only) → 3200 ─────────────────────
+    # Only generate when the script explicitly identifies a minor by age, or uses
+    # unambiguous child-cast language. "Young [adult character]" flashbacks do NOT qualify.
+    _CONFIRMED_MINOR_KW = frozenset({
+        "child extras", "child actors", "child cast", "children on set",
+        "minor cast", "minor performers", "minors on set", "minor extras",
+        "minor background", "child actor", "welfare worker required",
+    })
+    _AGE_RE = re.compile(r'\b\d+[- ]year[- ]old\b|\bage\s+\d+\b', re.IGNORECASE)
+
+    def _has_confirmed_minor(d: dict) -> bool:
+        """Return True only when the script contains an explicitly identified minor."""
+        for row in d.get("accounts", {}).get("1600", []):
+            if row.get("populated_by") != "SCRIPT":
+                continue
+            combined = (
+                (row.get("description") or "") + " " + (row.get("notes") or "")
+            ).lower()
+            if _AGE_RE.search(combined) or any(kw in combined for kw in _CONFIRMED_MINOR_KW):
+                return True
+        for row in d.get("accounts", {}).get("3900", []):
+            if row.get("populated_by") != "SCRIPT":
+                continue
+            desc_lower = (row.get("description") or "").lower()
+            if "child" in desc_lower or any(kw in desc_lower for kw in _CONFIRMED_MINOR_KW):
+                return True
+        return False
+
+    _MINOR_TRIGGERS = (
+        "child extras", "child actors", "children on set",
+        "minor cast", "minor performers", "minor extras",
+        "welfare worker required",
+    )
     welfare_trigger_rows = [
         r for r in accounts.get("3900", [])
         if r.get("populated_by") == "SCRIPT"
         and any(phrase in (r.get("notes") or "").lower() for phrase in _MINOR_TRIGGERS)
     ]
-    if welfare_trigger_rows:
+    confirmed_minor = _has_confirmed_minor(data)
+
+    # Suppress any existing 3200 welfare worker rows if no confirmed minor found
+    if not confirmed_minor:
+        original_count = len(accounts.get("3200", []))
+        accounts["3200"] = [
+            r for r in accounts.get("3200", [])
+            if not (
+                r.get("populated_by") == "SCRIPT"
+                and "welfare" in (r.get("description") or "").lower()
+            )
+        ]
+        suppressed = original_count - len(accounts.get("3200", []))
+        if suppressed:
+            print(
+                f"  [flow-through] Suppressed {suppressed} 3200 Welfare Worker row(s) — "
+                f"no confirmed minor identified (welfare worker requires explicit age or "
+                f"unambiguous child-cast language)."
+            )
+
+    if welfare_trigger_rows and confirmed_minor:
         existing_3200_text = " ".join(
             r.get("description", "").lower()
             for r in accounts.get("3200", [])
@@ -529,15 +593,15 @@ def _enforce_flow_through(data: dict) -> None:
                 "script_page": trigger.get("script_page"),
                 "script_quote": "",
                 "notes": (
-                    "Auto-generated: 3900 Background row Notes flagged minor extras. "
-                    "Required when minor background performers are present. "
-                    "Confirm minor headcount with AD — welfare worker-to-minor ratio may apply per state labor law."
+                    "Required when confirmed minor background performers are present. "
+                    "Confirm minor headcount with AD — welfare worker-to-minor ratio "
+                    "may apply per state labor law."
                 ),
                 "confidence": "High",
             })
             print(
                 "  [flow-through] Injected 3200 Welfare Worker / Studio Teacher row — "
-                "minor extras flagged in 3900 Background Notes."
+                "confirmed minor extras present in 3900 Background."
             )
 
     # ── Water Safety → 2950 ──────────────────────────────────────────────────
@@ -584,6 +648,125 @@ def _enforce_flow_through(data: dict) -> None:
             print(
                 f"  [flow-through] Injected 2950 Water Safety Officer row — "
                 f"{len(water_cast_scenes)} scene(s) flagged cast in open water or surf."
+            )
+
+    # ── Scripted source/live music → 5400 ────────────────────────────────────
+    # When any scene has scripted source music (character sings, jukebox, radio on,
+    # live band) and no 5400 SCRIPT row exists, inject a placeholder.
+    _MUSIC_TRIGGER_KW = frozenset({
+        "music plays", "music blares", "jukebox", "radio on", "sings", "singing",
+        "plays piano", "plays guitar", "plays violin", "plays drums", "plays the",
+        "live music", "live band", "band plays", "orchestra", "dances to",
+        "music fills", "song plays", "music from", "tune plays", "melody",
+    })
+    # Also check 6200 rows for sync-license flags as a secondary indicator
+    sync_scenes = []
+    for scene in scenes:
+        scene_text = " ".join([
+            " ".join(str(p) for p in (scene.get("practical_fx") or [])),
+            " ".join(str(f) for f in (scene.get("flags") or [])),
+            scene.get("wardrobe_notes") or "",
+        ]).lower()
+        if any(kw in scene_text for kw in _MUSIC_TRIGGER_KW):
+            sync_scenes.append(scene)
+    # Also check 6200 rows
+    has_sync_6200 = any(
+        "sync" in (r.get("description") or "").lower()
+        or "music" in (r.get("description") or "").lower()
+        for r in accounts.get("6200", [])
+        if r.get("populated_by") == "SCRIPT"
+    )
+    if (sync_scenes or has_sync_6200):
+        script_5400 = [r for r in accounts.get("5400", []) if r.get("populated_by") == "SCRIPT"]
+        if not script_5400:
+            source_page = (sync_scenes[0].get("script_page") if sync_scenes else None)
+            scene_num = (sync_scenes[0].get("scene_number", "?") if sync_scenes else "?")
+            accounts.setdefault("5400", []).append({
+                "account_no": None,
+                "description": (
+                    f"Live/source music — scripted on-set music (Scene {scene_num}) — "
+                    f"rights and playback decision pending"
+                ),
+                "amount": 1,
+                "unit_type": "Allow",
+                "populated_by": "SCRIPT",
+                "script_page": source_page,
+                "script_quote": "",
+                "notes": (
+                    "Scripted source music detected. Three decision paths: "
+                    "(1) live musicians on set — budget per session; "
+                    "(2) pre-cleared sync + master license for identified track; "
+                    "(3) original composition by score composer. "
+                    "Named copyrighted music: sync license and master rights clearance IS required. "
+                    "Confirm with music supervisor and production legal before shoot day."
+                ),
+                "confidence": "Medium",
+            })
+            print(
+                f"  [flow-through] Injected 5400 source music row — "
+                f"scripted on-set music detected in scene breakdown or 6200 sync flag."
+            )
+
+    # ── Period scenes → 2200 production design SCRIPT rows ───────────────────
+    # Any scene set >10 years before present or in a named historical era requires
+    # a 2200 SCRIPT row for period production design physical work.
+    _PERIOD_YEAR_RE = re.compile(r'\b(1[0-9]{3}|20[01][0-9])\b')
+    _ERA_KW = frozenset({
+        "victorian", "edwardian", "flashback", "1920s", "1930s", "1940s",
+        "1950s", "1960s", "1970s", "1980s", "period", "wartime", "wwii",
+        "world war", "civil war",
+    })
+    _CURRENT_DECADE = 2020  # anything before this is considered historical
+
+    period_tags: dict[str, list] = {}  # era_key → list of scene objects
+    for scene in scenes:
+        heading = scene.get("heading", "").lower()
+        wardrobe = (scene.get("wardrobe_notes") or "").lower()
+        combined = heading + " " + wardrobe
+        # Explicit year in heading (e.g. "INT. DINER - 1971 - DAY")
+        years = [int(m) for m in _PERIOD_YEAR_RE.findall(combined) if int(m) < _CURRENT_DECADE]
+        if years:
+            era_key = f"{min(years)}s"  # use decade as grouping key
+            period_tags.setdefault(era_key, []).append(scene)
+        # Era keywords
+        for kw in _ERA_KW:
+            if kw in combined:
+                period_tags.setdefault(kw, []).append(scene)
+                break  # one tag per scene is enough
+
+    if period_tags:
+        script_2200 = [r for r in accounts.get("2200", []) if r.get("populated_by") == "SCRIPT"]
+        existing_2200_text = " ".join(r.get("description", "").lower() for r in script_2200)
+        for era_key, era_scenes in period_tags.items():
+            if era_key in existing_2200_text:
+                continue  # already covered
+            locations_2200 = list({
+                (s.get("heading", "").rsplit(" - ", 1)[0].strip() or s.get("heading", ""))
+                for s in era_scenes
+            })
+            loc_str = "; ".join(locations_2200[:4])
+            first_page = era_scenes[0].get("script_page")
+            accounts.setdefault("2200", []).append({
+                "account_no": None,
+                "description": f"Period {era_key.upper()} production design — {loc_str}",
+                "amount": 1,
+                "unit_type": "Allow",
+                "populated_by": "SCRIPT",
+                "script_page": first_page,
+                "script_quote": "",
+                "notes": (
+                    f"Period {era_key} production design — physical set work required for "
+                    f"{len(era_scenes)} scene(s): {loc_str}. "
+                    f"Confirm construction vs dressing-only approach with Production Designer. "
+                    f"This is NOT the Art Director DEAL row — it is the physical period work budget."
+                ),
+                "confidence": "High",
+            })
+        injected_2200 = len(period_tags)
+        if injected_2200:
+            print(
+                f"  [flow-through] Injected {injected_2200} 2200 period production design "
+                f"row(s) — historical period(s) detected in scene headings."
             )
 
     # ── Suppress unsupported pre-production photography 3200 rows ────────────
@@ -654,6 +837,7 @@ _MISROUTED_PHRASES = (
     "should have a 2500",
     "should be in 2500",
     "should be moved to 2500",
+    "costume/prop crossover",
 )
 
 
@@ -908,6 +1092,53 @@ def _deduplicate_accounts(data: dict) -> None:
                 clean_2500.append(row)
         accounts["2500"] = clean_2500
 
+    # Rule 2b: Costume keyword scan — any 2500 row describing a wearable item is misrouted
+    # to 3300 Wardrobe. 3300 always wins over 2500 for clothing worn by performers.
+    _COSTUME_KEYWORDS = frozenset({
+        "uniform", "costume", " suit", "dress", "robe", "outfit", "jacket",
+        "coat", "shirt", "pants", "blouse", "gown", "attire", "clothing",
+        "worn by", "dressed in", "wardrobe",
+    })
+    rows_2500_cos = accounts.get("2500", [])
+    clean_2500_cos = []
+    injected_3300_cos = []
+    existing_3300_norms = script_norms("3300")
+    for row in rows_2500_cos:
+        if row.get("populated_by") != "SCRIPT":
+            clean_2500_cos.append(row)
+            continue
+        desc_lower = (row.get("description") or "").lower()
+        if any(kw in desc_lower for kw in _COSTUME_KEYWORDS):
+            print(
+                f"  [dedup] Suppressed 2500: '{row.get('description', '?')[:70]}' — "
+                f"wearable costume item (3300 Wardrobe always wins over Props)"
+            )
+            n = _norm(row.get("description", ""))
+            if n and n not in existing_3300_norms:
+                injected_3300_cos.append({
+                    "account_no": None,
+                    "description": row.get("description", ""),
+                    "amount": row.get("amount"),
+                    "unit_type": row.get("unit_type", "Allow"),
+                    "populated_by": "SCRIPT",
+                    "script_page": row.get("script_page"),
+                    "script_quote": row.get("script_quote", ""),
+                    "notes": (
+                        (row.get("notes") or "")
+                        + " Rerouted from 2500 to 3300 — wearable costume item."
+                    ).strip(),
+                    "confidence": row.get("confidence", "Medium"),
+                })
+                existing_3300_norms.add(n)
+        else:
+            clean_2500_cos.append(row)
+    accounts["2500"] = clean_2500_cos
+    if injected_3300_cos:
+        accounts.setdefault("3300", []).extend(injected_3300_cos)
+        print(
+            f"  [dedup] Rerouted {len(injected_3300_cos)} 2500 costume row(s) → 3300 Wardrobe."
+        )
+
     # Rule 3: Notes-referenced account — suppress source when same item exists in target
     # Skip pairs already handled by Rules 1 & 2 to avoid double-processing.
     rule12_pairs = {("2400", "2500"), ("2500", "3300")}
@@ -985,6 +1216,85 @@ def _deduplicate_accounts(data: dict) -> None:
         else:
             clean_2700.append(row)
     accounts["2700"] = clean_2700
+
+
+def _consolidate_stunt_rows(data: dict) -> None:
+    """
+    Fix 8: Merge all 2950 Stunt Coordinator rows into one, and all Safety Officer rows
+    into one. Regardless of how many stunt scenes, exactly one Coordinator row and one
+    Safety Officer row should exist. Modifies data in-place.
+    """
+    accounts = data.get("accounts", {})
+    script_2950 = [r for r in accounts.get("2950", []) if r.get("populated_by") == "SCRIPT"]
+
+    def _merge_role(role_kw: str) -> None:
+        """Merge all SCRIPT rows whose description contains role_kw into one."""
+        role_rows = [
+            r for r in script_2950
+            if role_kw.lower() in (r.get("description") or "").lower()
+        ]
+        if len(role_rows) <= 1:
+            return  # nothing to merge
+        # Collect all gag descriptions, stripping the role prefix
+        gag_parts = []
+        pages = []
+        for r in role_rows:
+            desc = r.get("description", "")
+            # Strip "Stunt Coordinator — " / "Safety Officer — " prefix if present
+            for sep in (" — ", " -- ", " - "):
+                if sep in desc:
+                    desc = desc.split(sep, 1)[1]
+                    break
+            if desc and desc.lower() not in ("stunt action flagged in scene breakdown",):
+                gag_parts.append(desc)
+            if r.get("script_page"):
+                pages.append(r["script_page"])
+
+        gag_str = "; ".join(dict.fromkeys(gag_parts))[:200] or "all stunt action"
+        first_page = pages[0] if pages else None
+
+        if "coordinator" in role_kw.lower():
+            merged_desc = f"Stunt Coordinator -- {gag_str}"
+            merged_notes = (
+                f"Stunt Coordinator covering all stunt action in production: {gag_str}. "
+                f"Confirm performer-vs-stunt-double requirement for each gag."
+            )
+        else:
+            merged_desc = f"Safety Officer -- all stunt action"
+            merged_notes = (
+                f"Set Safety Officer required on all shoot days with stunt action. "
+                f"Confirm shoot schedule with AD."
+            )
+
+        merged_row = {
+            "account_no": None,
+            "description": merged_desc,
+            "amount": 1,
+            "unit_type": "Days",
+            "populated_by": "SCRIPT",
+            "script_page": first_page,
+            "script_quote": "",
+            "notes": merged_notes,
+            "confidence": "High",
+        }
+
+        # Remove all role rows and insert the single merged row
+        other_rows = [
+            r for r in accounts.get("2950", [])
+            if role_kw.lower() not in (r.get("description") or "").lower()
+            or r.get("populated_by") != "SCRIPT"
+        ]
+        accounts["2950"] = other_rows + [merged_row]
+        # Rebuild script_2950 so the Safety Officer pass sees the updated list
+        script_2950[:] = [
+            r for r in accounts["2950"] if r.get("populated_by") == "SCRIPT"
+        ]
+        print(
+            f"  [stunt-consolidate] Merged {len(role_rows)} {role_kw} rows → one row."
+        )
+
+    _merge_role("Stunt Coordinator")
+    _merge_role("Safety Officer")
 
 
 def _default_output(input_path: str) -> str:
@@ -1067,6 +1377,9 @@ def main() -> None:
 
     print("Running structural consistency checks...")
     _enforce_flow_through(data)
+
+    print("Consolidating stunt rows...")
+    _consolidate_stunt_rows(data)
 
     print("Running cross-account deduplication...")
     _deduplicate_accounts(data)

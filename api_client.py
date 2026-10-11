@@ -24,7 +24,7 @@ ACCOUNT_GROUPS: list[tuple[list[str], bool]] = [
     (["1600"], True),                                                        # Cast + scene breakdown
     (["2200", "2300", "2400", "2500"], False),                               # Art dept + props
     (["2600", "2700", "2800", "2900", "2950", "3000", "3100"], False),       # Camera/electric/grip/sound/stunts/FX
-    (["3200", "3300", "3400", "3500", "3600", "3900"], False),               # Set ops/wardrobe/makeup/locations/transport/extras
+    (["3200", "3300", "3400", "3500", "3600", "3900", "5400"], False),       # Set ops/wardrobe/makeup/locations/transport/extras/source-music
     (["6200"], False),                                                       # Legal clearance
 ]
 

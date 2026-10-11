@@ -451,7 +451,7 @@ _TOP_ROWS: list[tuple[int, str, str | None, bool, bool, bool]] = [
     (33, "6100 – Insurance",                "SUM('6100 – Insurance'!H:H)",                False, False, False),
     (34, "6200 – Legal",                    "SUM('6200 – Legal'!H:H)",                    False, False, False),
     (35, "6300 – Publicity",                "SUM('6300 – Publicity'!H:H)",                False, False, False),
-    (36, "6400 – Contingency (10%)",        "(C8+C26+C30)*0.10",                          False, False, False),
+    (36, "6400 – Miscellaneous",             "SUM('6400 – Miscellaneous'!H:H)",      False, False, False),
     (37, "GRAND TOTAL",                     "C8+C26+C30+C33+C34+C35+C36",                False, False, True),
 ]
 
@@ -595,6 +595,25 @@ def _create_account_tab(wb: Workbook, acct_no: str, acct_name: str):
     return ws
 
 
+def _validate_formula_columns(ws, acct_no: str) -> None:
+    """Log any SCRIPT rows with a numeric Amount but missing F or H formula strings."""
+    violations = []
+    for row in ws.iter_rows(min_row=2):
+        c_val = row[2].value   # column C — Amount
+        f_val = row[5].value   # column F — Subtotal
+        h_val = row[7].value   # column H — Total
+        if not isinstance(c_val, (int, float)):
+            continue           # skip template/placeholder rows with text in C
+        if not (isinstance(f_val, str) and f_val.startswith("=")):
+            violations.append(f"{acct_no} row {row[0].row}: C={c_val} but F={f_val!r}")
+        if not (isinstance(h_val, str) and h_val.startswith("=")):
+            violations.append(f"{acct_no} row {row[0].row}: C={c_val} but H={h_val!r}")
+    if violations:
+        print(f"  [excel-validate] Formula gap(s) in {acct_no}:")
+        for v in violations[:5]:
+            print(f"    {v}")
+
+
 def _write_account_rows(
     ws, acct_no: str, script_items: list[dict], pdf_path: str
 ) -> None:
@@ -625,6 +644,8 @@ def _write_account_rows(
         _write_template_row(ws, row, acct_no, sub_idx, desc, placeholder_type)
         row += 1
         sub_idx += 1
+
+    _validate_formula_columns(ws, acct_no)
 
 
 def _write_script_row(
@@ -662,9 +683,9 @@ def _write_script_row(
     # E — Rate (blank — Tool 2 / LP fills)
     ws.cell(row=row, column=5, value=None).number_format = _CURRENCY_FMT
 
-    # F — Subtotal formula
+    # F — Subtotal formula: Amount × Rate (D is unit-type text, must never appear in math)
     f_cell = ws.cell(row=row, column=6)
-    f_cell.value = f'=IFERROR(C{row}*D{row}*E{row},"")'
+    f_cell.value = f'=IFERROR(C{row}*E{row},"")'
     f_cell.font = FORMULA_FONT
     f_cell.number_format = _CURRENCY_FMT
 
@@ -734,7 +755,19 @@ def _write_template_row(
     c.font = PLACEHOLDER_FONT
     c.fill = FILL_TEMPLATE
 
-    # F and H intentionally left blank for template rows (nothing to calculate yet)
+    # F — Subtotal formula (writes for all row types so formulas are live once C/E filled)
+    f_cell = ws.cell(row=row, column=6)
+    f_cell.value = f'=IFERROR(C{row}*E{row},"")'
+    f_cell.font = FORMULA_FONT
+    f_cell.number_format = _CURRENCY_FMT
+    f_cell.fill = FILL_TEMPLATE
+
+    # H — Total formula
+    h_cell = ws.cell(row=row, column=8)
+    h_cell.value = f'=IFERROR(F{row}+(F{row}*G{row}),"")'
+    h_cell.font = FORMULA_FONT
+    h_cell.number_format = _CURRENCY_FMT
+    h_cell.fill = FILL_TEMPLATE
 
     o = ws.cell(row=row, column=15, value=placeholder_type)
     o.font = Font(size=10, color="6C757D")
